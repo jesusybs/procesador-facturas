@@ -43,6 +43,14 @@ LAST_EXCEL_PATH = os.path.join(OUTPUT_FOLDER, "CONSOLIDADO_FACTURAS.xlsx")
 def index():
     return render_template('index.html')
 
+@app.route('/api/version')
+def get_version():
+    return jsonify({
+        'version': '2.0.0',
+        'providers': ['PERFECT TRADING', 'STAR AUTO PARTS, S.A.'],
+        'status': 'online'
+    })
+
 @app.route('/api/process', methods=['POST'])
 def process_files():
     global LAST_EXCEL_PATH
