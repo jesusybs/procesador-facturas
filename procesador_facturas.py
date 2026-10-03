@@ -766,6 +766,7 @@ def export_invoices_to_excel(invoices_data, output_excel_path):
             cell.border = border_thin
         current_row += 1
 
+        start_data_row = current_row
         # Filas de datos
         for r in sorted_rows:
             vals = [
@@ -788,25 +789,32 @@ def export_invoices_to_excel(invoices_data, output_excel_path):
                 cell.number_format = num_fmt
                 cell.border = border_thin
             current_row += 1
+        end_data_row = current_row - 1
 
-        # Fila de totales en negrita
-        total_qty = float(sum(r['qty'] for r in sorted_rows))
-        total_peso = float(sum(r['peso'] for r in sorted_rows))
-        total_cbm = float(sum(r['cbm'] for r in sorted_rows))
-        last_nb = max(r['nb'] for r in sorted_rows) if sorted_rows else 0
+        # Fila de totales en negrita con fórmulas dinámicas de Excel
+        if end_data_row >= start_data_row:
+            formula_nb = f"=MAX(D{start_data_row}:D{end_data_row})"
+            formula_qty = f"=SUM(I{start_data_row}:I{end_data_row})"
+            formula_peso = f"=SUM(J{start_data_row}:J{end_data_row})"
+            formula_cbm = f"=SUM(K{start_data_row}:K{end_data_row})"
+        else:
+            formula_nb = 0
+            formula_qty = 0
+            formula_peso = 0
+            formula_cbm = 0
 
         tot_vals = [
             (proveedor, align_left, "@"),
             (n_fact, align_center, "@"),
             (cliente, align_left, "@"),
-            (last_nb, align_center, "0"),
+            (formula_nb, align_center, "0"),
             ("", align_left, "@"),
             ("", align_left, "@"),
             ("", align_center, "@"),
             ("", align_left, "@"),
-            (total_qty, align_right, "#,##0"),
-            (total_peso, align_right, "#,##0.00"),
-            (total_cbm, align_right, "#,##0.0000")
+            (formula_qty, align_right, "#,##0"),
+            (formula_peso, align_right, "#,##0.00"),
+            (formula_cbm, align_right, "#,##0.0000")
         ]
         for col_idx, (v, al, num_fmt) in enumerate(tot_vals, start=1):
             cell = ws.cell(row=current_row, column=col_idx, value=v if v != "" else None)
