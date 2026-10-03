@@ -39,6 +39,7 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # Guardar la última ruta de excel generado en memoria de la sesión
 LAST_EXCEL_PATH = os.path.join(OUTPUT_FOLDER, "CONSOLIDADO_FACTURAS.xlsx")
+LAST_INVOICES_CACHE = []
 
 @app.route('/')
 def index():
@@ -52,9 +53,51 @@ def get_version():
         'status': 'online'
     })
 
+@app.route('/api/update_item', methods=['POST'])
+def update_item():
+    """
+    Actualiza la descripción de un repuesto en memoria y en el diccionario,
+    y regenera el Excel consolidado con los cambios aplicados en tiempo real.
+    """
+    global LAST_INVOICES_CACHE, LAST_EXCEL_PATH
+    data = request.get_json() or {}
+    factura = str(data.get('factura', '')).strip()
+    code = str(data.get('code', '')).strip()
+    old_detalle = str(data.get('old_detalle', '')).strip()
+    new_detalle = str(data.get('new_detalle', '')).strip().upper()
+
+    if not new_detalle:
+        return jsonify({'error': 'La descripción no puede estar vacía'}), 400
+
+    # 1. Guardar en diccionario persistente para auto-aprendizaje
+    if old_detalle and old_detalle != new_detalle:
+        save_learned_mapping(old_detalle, new_detalle)
+
+    # 2. Actualizar en la lista de facturas en memoria
+    updated_count = 0
+    for inv in LAST_INVOICES_CACHE:
+        if not factura or str(inv.get('n_fact', '')).strip() == factura:
+            for it in inv.get('items', []):
+                if (code and it.get('code') == code) or (it.get('detalle') == old_detalle):
+                    it['detalle'] = new_detalle
+                    updated_count += 1
+
+    # 3. Regenerar el Excel consolidado con los cambios
+    if LAST_INVOICES_CACHE:
+        output_excel = os.path.join(OUTPUT_FOLDER, "CONSOLIDADO_FACTURAS.xlsx")
+        export_invoices_to_excel(LAST_INVOICES_CACHE, output_excel)
+        LAST_EXCEL_PATH = output_excel
+
+    return jsonify({
+        'success': True,
+        'updated_count': updated_count,
+        'new_detalle': new_detalle,
+        'learned': True
+    })
+
 @app.route('/api/process', methods=['POST'])
 def process_files():
-    global LAST_EXCEL_PATH
+    global LAST_EXCEL_PATH, LAST_INVOICES_CACHE
     
     if 'files[]' not in request.files:
         return jsonify({'error': 'No se enviaron archivos'}), 400
@@ -100,6 +143,8 @@ def process_files():
     all_invoices = [inv for inv in deduplicate_invoices(all_invoices) if inv.get('items')]
     if not all_invoices:
         return jsonify({'error': 'No se encontraron facturas o listas de empaque válidas para procesar.'}), 400
+
+    LAST_INVOICES_CACHE = all_invoices
 
     # Generar el Excel consolidado
     output_excel = os.path.join(OUTPUT_FOLDER, "CONSOLIDADO_FACTURAS.xlsx")

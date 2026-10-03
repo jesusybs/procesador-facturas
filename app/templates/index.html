@@ -153,14 +153,28 @@
 
       <!-- Invoices Preview Section -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="p-5 sm:p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h3 class="text-base font-bold text-slate-900">Vista Previa de Tablas Consolidadas</h3>
-            <p class="text-xs text-slate-500">Mismo formato de 11 columnas que se exportó al Excel</p>
+            <div class="flex items-center space-x-2.5">
+              <h3 class="text-base font-bold text-slate-900">Vista Previa de Tablas Consolidadas</h3>
+              <span id="resultsCountBadge" class="hidden px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200"></span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Formato oficial de 11 columnas con fórmulas de Excel. <span class="text-blue-600 font-medium">💡 Haz clic sobre cualquier descripción para editarla y enseñarla al diccionario.</span></p>
           </div>
-          <div class="flex items-center space-x-3">
-            <select id="invoiceFilter" class="text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
-              <option value="all">Ver todas las facturas</option>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <!-- Live Search Bar -->
+            <div class="relative flex-1 sm:w-72">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </div>
+              <input type="text" id="tableSearchInput" placeholder="Buscar código, repuesto, marca..." class="text-xs pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none w-full transition-all">
+              <button id="clearSearchBtn" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+            <!-- Invoice Filter Dropdown -->
+            <select id="invoiceFilter" class="text-xs bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none font-medium text-slate-700">
+              <option value="all">Ver todas las facturas consolidadas</option>
             </select>
           </div>
         </div>
@@ -235,6 +249,12 @@
     </div>
   </div>
 
+  <!-- Floating Toast Notification -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center space-x-3 px-4 py-3 rounded-xl shadow-xl border text-xs sm:text-sm font-medium bg-white text-slate-900 border-slate-200">
+    <div id="toastIcon" class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xs bg-emerald-500">✓</div>
+    <span id="toastMessage" class="max-w-xs sm:max-w-sm">Mensaje</span>
+  </div>
+
   <!-- JavaScript Interaction -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -251,6 +271,9 @@
     const resultsSection = document.getElementById('resultsSection');
     const tablesContainer = document.getElementById('tablesContainer');
     const invoiceFilter = document.getElementById('invoiceFilter');
+    const tableSearchInput = document.getElementById('tableSearchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const resultsCountBadge = document.getElementById('resultsCountBadge');
 
     // Drag and Drop Events
     ['dragenter', 'dragover'].forEach(name => {
@@ -393,9 +416,61 @@
     });
 
     let currentInvoices = [];
+    let currentSearchTerm = '';
+
+    // Floating Toast Notification Logic
+    let toastTimer = null;
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toastNotification');
+      const toastIcon = document.getElementById('toastIcon');
+      const toastMessage = document.getElementById('toastMessage');
+
+      if (!toast) return;
+      if (toastTimer) clearTimeout(toastTimer);
+
+      toastMessage.textContent = message;
+      if (type === 'success') {
+        toastIcon.className = 'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xs bg-emerald-500';
+        toastIcon.textContent = '✓';
+        toast.className = 'fixed bottom-6 right-6 z-50 transform translate-y-0 opacity-100 transition-all duration-300 flex items-center space-x-3 px-4 py-3 rounded-xl shadow-xl border text-xs sm:text-sm font-medium bg-white text-slate-900 border-emerald-300 ring-4 ring-emerald-50 pointer-events-auto';
+      } else if (type === 'error') {
+        toastIcon.className = 'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xs bg-rose-500';
+        toastIcon.textContent = '✕';
+        toast.className = 'fixed bottom-6 right-6 z-50 transform translate-y-0 opacity-100 transition-all duration-300 flex items-center space-x-3 px-4 py-3 rounded-xl shadow-xl border text-xs sm:text-sm font-medium bg-white text-slate-900 border-rose-300 ring-4 ring-rose-50 pointer-events-auto';
+      } else {
+        toastIcon.className = 'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-xs bg-blue-500';
+        toastIcon.textContent = 'i';
+        toast.className = 'fixed bottom-6 right-6 z-50 transform translate-y-0 opacity-100 transition-all duration-300 flex items-center space-x-3 px-4 py-3 rounded-xl shadow-xl border text-xs sm:text-sm font-medium bg-white text-slate-900 border-blue-300 ring-4 ring-blue-50 pointer-events-auto';
+      }
+
+      toastTimer = setTimeout(() => {
+        toast.className = 'fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center space-x-3 px-4 py-3 rounded-xl shadow-xl border text-xs sm:text-sm font-medium bg-white text-slate-900 border-slate-200';
+      }, 4000);
+    }
+
+    // Live Search Event Listeners
+    tableSearchInput.addEventListener('input', (e) => {
+      currentSearchTerm = e.target.value.trim().toLowerCase();
+      if (currentSearchTerm.length > 0) {
+        clearSearchBtn.classList.remove('hidden');
+      } else {
+        clearSearchBtn.classList.add('hidden');
+      }
+      renderTables(invoiceFilter.value);
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      tableSearchInput.value = '';
+      currentSearchTerm = '';
+      clearSearchBtn.classList.add('hidden');
+      renderTables(invoiceFilter.value);
+    });
 
     function renderResults(data) {
       currentInvoices = data.invoices;
+      currentSearchTerm = '';
+      tableSearchInput.value = '';
+      clearSearchBtn.classList.add('hidden');
 
       // Update KPIs
       document.getElementById('kpiFacturas').textContent = data.summary.total_facturas;
@@ -422,6 +497,28 @@
       renderTables(e.target.value);
     });
 
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function highlightMatch(text, term) {
+      if (!term || !text) return escapeHtml(text);
+      const str = String(text);
+      const lower = str.toLowerCase();
+      const idx = lower.indexOf(term);
+      if (idx === -1) return escapeHtml(str);
+      const before = escapeHtml(str.substring(0, idx));
+      const match = escapeHtml(str.substring(idx, idx + term.length));
+      const after = escapeHtml(str.substring(idx + term.length));
+      return `${before}<mark class="bg-amber-200 text-amber-950 font-bold px-0.5 rounded-xs">${match}</mark>${after}`;
+    }
+
     function renderTables(filterIndex) {
       tablesContainer.innerHTML = '';
 
@@ -429,22 +526,65 @@
         ? currentInvoices 
         : [currentInvoices[parseInt(filterIndex)]];
 
+      let totalVisibleRows = 0;
+      let totalVisibleInvoices = 0;
+
       invoicesToRender.forEach(inv => {
+        if (!inv) return;
+
+        const matchingRows = inv.rows.filter(r => {
+          if (!currentSearchTerm) return true;
+          return (
+            (r.codigo && r.codigo.toLowerCase().includes(currentSearchTerm)) ||
+            (r.detalle && r.detalle.toLowerCase().includes(currentSearchTerm)) ||
+            (r.marca && r.marca.toLowerCase().includes(currentSearchTerm)) ||
+            (r.proveedor && r.proveedor.toLowerCase().includes(currentSearchTerm)) ||
+            (r.cliente && r.cliente.toLowerCase().includes(currentSearchTerm)) ||
+            (r.nb && String(r.nb).includes(currentSearchTerm))
+          );
+        });
+
+        if (matchingRows.length === 0 && currentSearchTerm) {
+          return;
+        }
+
+        totalVisibleInvoices++;
+        totalVisibleRows += matchingRows.length;
+
         const tableCard = document.createElement('div');
-        tableCard.className = 'border border-slate-200 rounded-xl overflow-hidden shadow-sm';
+        tableCard.className = 'border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white';
 
         let rowsHtml = '';
-        inv.rows.forEach(r => {
+        matchingRows.forEach(r => {
           rowsHtml += `
             <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 text-xs">
-              <td class="px-3 py-2 text-slate-700 whitespace-nowrap">${r.proveedor}</td>
+              <td class="px-3 py-2 text-slate-700 whitespace-nowrap">${highlightMatch(r.proveedor, currentSearchTerm)}</td>
               <td class="px-3 py-2 text-center font-medium text-slate-900 whitespace-nowrap">${r.n_fact}</td>
-              <td class="px-3 py-2 text-slate-600 whitespace-nowrap">${r.cliente}</td>
-              <td class="px-3 py-2 text-center font-semibold text-slate-900">${r.nb}</td>
-              <td class="px-3 py-2 font-mono text-slate-700 whitespace-nowrap">${r.codigo}</td>
-              <td class="px-3 py-2 font-medium text-slate-800">${r.detalle}</td>
+              <td class="px-3 py-2 text-slate-600 whitespace-nowrap">${highlightMatch(r.cliente, currentSearchTerm)}</td>
+              <td class="px-3 py-2 text-center font-semibold text-slate-900">${highlightMatch(r.nb, currentSearchTerm)}</td>
+              <td class="px-3 py-2 font-mono text-slate-700 whitespace-nowrap font-medium">${highlightMatch(r.codigo, currentSearchTerm)}</td>
+              
+              <!-- Detalle Cell with Interactive Inline Editing -->
+              <td class="px-3 py-2 font-medium text-slate-800 cell-detalle relative" data-detalle="${escapeHtml(r.detalle)}" data-factura="${escapeHtml(r.n_fact)}" data-code="${escapeHtml(r.codigo)}">
+                <div class="view-mode flex items-center justify-between group/cell cursor-pointer py-0.5 rounded hover:bg-blue-50/50 px-1 -mx-1" title="Haz doble clic o clic en el lápiz para editar">
+                  <span class="detalle-text">${highlightMatch(r.detalle, currentSearchTerm)}</span>
+                  <button class="edit-cell-btn opacity-0 group-hover/cell:opacity-100 transition-opacity ml-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-100/60 rounded" title="Editar descripción">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                  </button>
+                </div>
+                <div class="edit-mode hidden flex items-center space-x-1 py-0.5">
+                  <input type="text" class="edit-input w-full text-xs font-semibold px-2 py-1 border border-blue-400 rounded focus:ring-2 focus:ring-blue-500 uppercase outline-none bg-white text-slate-900 shadow-inner" value="${escapeHtml(r.detalle)}">
+                  <button class="save-cell-btn p-1 text-emerald-600 hover:bg-emerald-100 rounded" title="Guardar cambios (Enter)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                  </button>
+                  <button class="cancel-cell-btn p-1 text-slate-400 hover:text-red-500 hover:bg-rose-100 rounded" title="Cancelar (Esc)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+              </td>
+
               <td class="px-3 py-2 text-center text-slate-500">${r.uni}</td>
-              <td class="px-3 py-2 text-slate-700">${r.marca}</td>
+              <td class="px-3 py-2 text-slate-700">${highlightMatch(r.marca, currentSearchTerm)}</td>
               <td class="px-3 py-2 text-right font-semibold text-blue-700">${r.cantidad}</td>
               <td class="px-3 py-2 text-right font-semibold text-emerald-700">${r.peso}</td>
               <td class="px-3 py-2 text-right font-semibold text-purple-700">${r.cbm}</td>
@@ -452,30 +592,35 @@
           `;
         });
 
-        // Totals row in bold
+        // Totals row in bold with Excel formula notice
+        const isSearchActive = currentSearchTerm && matchingRows.length !== inv.rows.length;
         const totalRowHtml = `
           <tr class="bg-slate-100/90 font-bold border-t-2 border-slate-300 text-xs text-slate-900">
             <td class="px-3 py-2.5">${inv.proveedor}</td>
             <td class="px-3 py-2.5 text-center">${inv.n_fact}</td>
             <td class="px-3 py-2.5">${inv.cliente}</td>
-            <td class="px-3 py-2.5 text-center">${inv.total_nb}</td>
+            <td class="px-3 py-2.5 text-center" title="Fórmula Excel: =MAX(D...)">${inv.total_nb}</td>
             <td class="px-3 py-2.5"></td>
-            <td class="px-3 py-2.5">TOTAL GENERAL</td>
+            <td class="px-3 py-2.5 flex items-center justify-between">
+              <span>${isSearchActive ? 'TOTAL FACTURA COMPLETA' : 'TOTAL GENERAL'}</span>
+              <span class="text-[10px] font-mono text-slate-400 font-normal ml-1">fx (=SUM)</span>
+            </td>
             <td class="px-3 py-2.5"></td>
             <td class="px-3 py-2.5"></td>
-            <td class="px-3 py-2.5 text-right text-blue-800">${inv.total_qty}</td>
-            <td class="px-3 py-2.5 text-right text-emerald-800">${inv.total_peso}</td>
-            <td class="px-3 py-2.5 text-right text-purple-800">${inv.total_cbm}</td>
+            <td class="px-3 py-2.5 text-right text-blue-800" title="Fórmula Excel: =SUM(I...)">${inv.total_qty}</td>
+            <td class="px-3 py-2.5 text-right text-emerald-800" title="Fórmula Excel: =SUM(J...)">${inv.total_peso}</td>
+            <td class="px-3 py-2.5 text-right text-purple-800" title="Fórmula Excel: =SUM(K...)">${inv.total_cbm}</td>
           </tr>
         `;
 
         tableCard.innerHTML = `
           <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-2.5">
               <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
               <h4 class="font-bold text-slate-900 text-sm">FACTURA ${inv.n_fact} &bull; ${inv.cliente}</h4>
+              ${isSearchActive ? `<span class="text-[11px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full border border-amber-200">${matchingRows.length} de ${inv.rows.length} líneas</span>` : ''}
             </div>
-            <span class="text-xs text-slate-500">${inv.rows.length} líneas agrupadas</span>
+            <span class="text-xs text-slate-500">${matchingRows.length} líneas ${currentSearchTerm ? 'filtradas' : 'agrupadas'}</span>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -489,7 +634,7 @@
                   <th class="px-3 py-2.5">DETALLE</th>
                   <th class="px-3 py-2.5 text-center">UNI</th>
                   <th class="px-3 py-2.5">MARCA</th>
-                  <th class="px-3 py-2.5 text-right">CANTIDA</th>
+                  <th class="px-3 py-2.5 text-right">CANTIDAD</th>
                   <th class="px-3 py-2.5 text-right">PESO</th>
                   <th class="px-3 py-2.5 text-right">CBM</th>
                 </tr>
@@ -503,6 +648,148 @@
         `;
 
         tablesContainer.appendChild(tableCard);
+      });
+
+      // Update badge count
+      if (currentSearchTerm) {
+        resultsCountBadge.textContent = `${totalVisibleRows} repuestos encontrados`;
+        resultsCountBadge.classList.remove('hidden');
+      } else {
+        resultsCountBadge.classList.add('hidden');
+      }
+
+      // Empty state if nothing matches
+      if (totalVisibleInvoices === 0) {
+        tablesContainer.innerHTML = `
+          <div class="py-12 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-300">
+            <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center text-xl mb-3">🔍</div>
+            <h4 class="font-bold text-slate-800 text-sm">No se encontraron repuestos</h4>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Ninguna fila coincide con "${escapeHtml(currentSearchTerm)}". Puedes buscar por código, nombre, marca o bulto.</p>
+            <button id="resetSearchBtn" class="mt-4 px-3.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-semibold shadow-2xs transition-colors">
+              Limpiar búsqueda
+            </button>
+          </div>
+        `;
+        document.getElementById('resetSearchBtn')?.addEventListener('click', () => {
+          tableSearchInput.value = '';
+          currentSearchTerm = '';
+          clearSearchBtn.classList.add('hidden');
+          renderTables(invoiceFilter.value);
+        });
+      }
+
+      // Bind inline cell editors
+      attachInlineEditHandlers();
+    }
+
+    function attachInlineEditHandlers() {
+      document.querySelectorAll('.cell-detalle').forEach(cell => {
+        const viewMode = cell.querySelector('.view-mode');
+        const editMode = cell.querySelector('.edit-mode');
+        const editBtn = cell.querySelector('.edit-cell-btn');
+        const input = cell.querySelector('.edit-input');
+        const saveBtn = cell.querySelector('.save-cell-btn');
+        const cancelBtn = cell.querySelector('.cancel-cell-btn');
+
+        const factura = cell.getAttribute('data-factura');
+        const code = cell.getAttribute('data-code');
+        const oldDetalle = cell.getAttribute('data-detalle');
+
+        const openEdit = () => {
+          viewMode.classList.add('hidden');
+          editMode.classList.remove('hidden');
+          input.focus();
+          input.select();
+        };
+
+        const closeEdit = () => {
+          input.value = oldDetalle;
+          editMode.classList.add('hidden');
+          viewMode.classList.remove('hidden');
+        };
+
+        const saveEdit = async () => {
+          const newDetalle = input.value.trim().toUpperCase();
+          if (!newDetalle) {
+            showToast("La descripción no puede estar vacía", "error");
+            return;
+          }
+          if (newDetalle === oldDetalle) {
+            closeEdit();
+            return;
+          }
+
+          input.disabled = true;
+          saveBtn.disabled = true;
+
+          try {
+            const res = await fetch('/api/update_item', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                factura: factura,
+                code: code,
+                old_detalle: oldDetalle,
+                new_detalle: newDetalle
+              })
+            });
+
+            const resData = await res.json();
+            if (res.ok && resData.success) {
+              // Update local currentInvoices
+              currentInvoices.forEach(inv => {
+                if (!factura || String(inv.n_fact) === String(factura)) {
+                  inv.rows.forEach(r => {
+                    if ((code && r.codigo === code) || (r.detalle === oldDetalle)) {
+                      r.detalle = newDetalle;
+                    }
+                  });
+                }
+              });
+
+              showToast(`¡Actualizado! "${newDetalle}" guardado en Excel y aprendido en diccionario.`, "success");
+              renderTables(invoiceFilter.value);
+            } else {
+              showToast(resData.error || "No se pudo actualizar el repuesto", "error");
+              input.disabled = false;
+              saveBtn.disabled = false;
+            }
+          } catch (e) {
+            showToast("Error de conexión al actualizar", "error");
+            input.disabled = false;
+            saveBtn.disabled = false;
+          }
+        };
+
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEdit();
+        });
+
+        viewMode.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          openEdit();
+        });
+
+        cancelBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeEdit();
+        });
+
+        saveBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          saveEdit();
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeEdit();
+          }
+        });
       });
     }
 
