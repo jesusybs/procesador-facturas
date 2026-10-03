@@ -46,12 +46,13 @@ def index():
 def process_files():
     global LAST_EXCEL_PATH
     
-    if 'files[]' not in request.files:
-        return jsonify({'error': 'No se enviaron archivos'}), 400
+    try:
+        if 'files[]' not in request.files:
+            return jsonify({'error': 'No se enviaron archivos'}), 400
 
-    uploaded_files = request.files.getlist('files[]')
-    if not uploaded_files or uploaded_files[0].filename == '':
-        return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
+        uploaded_files = request.files.getlist('files[]')
+        if not uploaded_files or uploaded_files[0].filename == '':
+            return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
 
     all_invoices = []
     processed_files_info = []
@@ -158,6 +159,10 @@ def process_files():
         },
         'download_url': '/download'
     })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Error al procesar archivos: {str(e)}'}), 500
 
 @app.route('/api/dictionary', methods=['GET', 'POST'])
 def manage_dictionary():
