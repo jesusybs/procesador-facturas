@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procesador de Facturas y Listas de Empaque</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .dragover { border-color: #3b82f6 !important; background-color: #eff6ff !important; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">Procesador Logístico de Repuestos</h1>
+          <p class="text-xs text-slate-500">Conversor determinista de Facturas y Packing Lists (PDF / Excel) a Excel Consolidado</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button id="openDictBtn" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors">
+          <svg class="w-4 h-4 mr-1.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+          </svg>
+          Diccionario de Repuestos
+        </button>
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+          Auto-Aprendizaje Activo
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
+    
+    <!-- Upload Section -->
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm">
+      <div class="text-center max-w-xl mx-auto mb-6">
+        <h2 class="text-xl font-bold text-slate-900">Cargar Archivos de Facturas</h2>
+        <p class="text-sm text-slate-500 mt-1">Arrastra tus archivos PDF o listas de empaque en Excel. Puedes subir múltiples archivos al mismo tiempo.</p>
+      </div>
+
+      <!-- Dropzone -->
+      <div id="dropzone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-blue-500 hover:bg-slate-50/50 transition-all cursor-pointer flex flex-col items-center justify-center space-y-4">
+        <div class="w-16 h-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+          </svg>
+        </div>
+        <div>
+          <p class="text-base font-medium text-slate-700">Arrastra aquí tus archivos PDF o Excel</p>
+          <p class="text-xs text-slate-400 mt-1">o haz clic para explorar tus carpetas</p>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xls" class="hidden">
+      </div>
+
+      <!-- Selected Files List -->
+      <div id="filesListContainer" class="mt-6 hidden">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-slate-700">Archivos seleccionados (<span id="fileCount">0</span>)</h3>
+          <button id="clearFilesBtn" class="text-xs text-red-600 hover:text-red-700 font-medium">Limpiar todo</button>
+        </div>
+        <div id="filesList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+
+        <div class="mt-6 flex justify-end">
+          <button id="processBtn" class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-blue-600 text-white font-medium shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-all focus:ring-4 focus:ring-blue-100 disabled:opacity-50">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
+            Procesar Facturas y Consolidar
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingIndicator" class="mt-6 hidden text-center py-6">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 animate-spin mb-3">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-slate-700">Extrayendo datos y calculando cuadre perfecto...</p>
+        <p class="text-xs text-slate-400 mt-1">Estandarizando repuestos y dividiendo bultos múltiples</p>
+      </div>
+    </div>
+
+    <!-- Results Section (Hidden initially) -->
+    <div id="resultsSection" class="hidden space-y-6">
+      
+      <!-- Summary Bar with Download Button -->
+      <div class="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">✓ Cuadre Matemático Exacto</span>
+          </div>
+          <h2 class="text-2xl font-bold mt-2">¡Consolidación Exitosa!</h2>
+          <p class="text-sm text-blue-200 mt-1">Se agruparon las líneas, estandarizaron descripciones y cuadraron los decimales de CANTIDAD, PESO y CBM.</p>
+        </div>
+        <div>
+          <a id="downloadExcelBtn" href="/download" class="inline-flex items-center justify-center px-7 py-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/30 transition-all text-base transform hover:-translate-y-0.5">
+            <svg class="w-6 h-6 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            Descargar Excel Consolidado (.xlsx)
+          </a>
+        </div>
+      </div>
+
+      <!-- KPI Metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Facturas</p>
+          <p id="kpiFacturas" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Bultos</p>
+          <p id="kpiBultos" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Piezas</p>
+          <p id="kpiPiezas" class="text-2xl font-bold text-blue-600 mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Peso Total (kg)</p>
+          <p id="kpiPeso" class="text-2xl font-bold text-emerald-600 mt-1">0,00</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm col-span-2 md:col-span-1">
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">CBM Total (m³)</p>
+          <p id="kpiCBM" class="text-2xl font-bold text-purple-600 mt-1">0,0000</p>
+        </div>
+      </div>
+
+      <!-- Invoices Preview Section -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Vista Previa de Tablas Consolidadas</h3>
+            <p class="text-xs text-slate-500">Mismo formato de 11 columnas que se exportó al Excel</p>
+          </div>
+          <div class="flex items-center space-x-3">
+            <select id="invoiceFilter" class="text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="all">Ver todas las facturas</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="tablesContainer" class="p-6 space-y-8 overflow-x-auto">
+          <!-- Tables injected by JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-auto">
+    Sistema Automatizado de Facturación y Packing Lists &bull; Motor Determinista Python
+  </footer>
+
+  <!-- JavaScript Interaction -->
+  <script>
+    let selectedFiles = [];
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const filesListContainer = document.getElementById('filesListContainer');
+    const filesList = document.getElementById('filesList');
+    const fileCount = document.getElementById('fileCount');
+    const clearFilesBtn = document.getElementById('clearFilesBtn');
+    const processBtn = document.getElementById('processBtn');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const resultsSection = document.getElementById('resultsSection');
+    const tablesContainer = document.getElementById('tablesContainer');
+    const invoiceFilter = document.getElementById('invoiceFilter');
+
+    // Drag and Drop Events
+    ['dragenter', 'dragover'].forEach(name => {
+      dropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+      dropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      const files = Array.from(e.dataTransfer.files);
+      addFiles(files);
+    });
+
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      addFiles(files);
+    });
+
+    function addFiles(files) {
+      const validFiles = files.filter(f => {
+        const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
+        return ['.pdf', '.xlsx', '.xls'].includes(ext);
+      });
+
+      if (validFiles.length === 0) {
+        alert("Por favor selecciona solo archivos PDF o Excel (.xlsx/.xls)");
+        return;
+      }
+
+      // Add to array avoiding duplicates by name
+      validFiles.forEach(f => {
+        if (!selectedFiles.some(cur => cur.name === f.name && cur.size === f.size)) {
+          selectedFiles.push(f);
+        }
+      });
+
+      renderFilesList();
+    }
+
+    function renderFilesList() {
+      if (selectedFiles.length === 0) {
+        filesListContainer.classList.add('hidden');
+        return;
+      }
+
+      filesListContainer.classList.remove('hidden');
+      fileCount.textContent = selectedFiles.length;
+      filesList.innerHTML = '';
+
+      selectedFiles.forEach((file, idx) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm';
+        
+        const isPdf = file.name.toLowerCase().endsWith('.pdf');
+        const iconColor = isPdf ? 'text-rose-500 bg-rose-50' : 'text-emerald-500 bg-emerald-50';
+        const label = isPdf ? 'PDF' : 'XLS';
+
+        item.innerHTML = `
+          <div class="flex items-center space-x-3 overflow-hidden">
+            <span class="w-8 h-8 rounded-lg ${iconColor} flex items-center justify-center font-bold text-xs flex-shrink-0">${label}</span>
+            <span class="truncate font-medium text-slate-700">${file.name}</span>
+            <span class="text-xs text-slate-400 flex-shrink-0">(${(file.size / 1024).toFixed(1)} KB)</span>
+          </div>
+          <button class="text-slate-400 hover:text-red-500 p-1 rounded-lg remove-btn" data-index="${idx}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        `;
+        filesList.appendChild(item);
+      });
+
+      document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const i = parseInt(btn.getAttribute('data-index'));
+          selectedFiles.splice(i, 1);
+          renderFilesList();
+        });
+      });
+    }
+
+    clearFilesBtn.addEventListener('click', () => {
+      selectedFiles = [];
+      renderFilesList();
+    });
+
+    // Process Submission
+    processBtn.addEventListener('click', async () => {
+      if (selectedFiles.length === 0) return;
+
+      const formData = new FormData();
+      selectedFiles.forEach(f => formData.append('files[]', f));
+
+      processBtn.disabled = true;
+      loadingIndicator.classList.remove('hidden');
+      resultsSection.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/process', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+          alert("Error al procesar: " + (data.error || "Ocurrió un error inesperado"));
+          return;
+        }
+
+        renderResults(data);
+      } catch (err) {
+        alert("Error de conexión al servidor: " + err.message);
+      } finally {
+        processBtn.disabled = false;
+        loadingIndicator.classList.add('hidden');
+      }
+    });
+
+    let currentInvoices = [];
+
+    function renderResults(data) {
+      currentInvoices = data.invoices;
+
+      // Update KPIs
+      document.getElementById('kpiFacturas').textContent = data.summary.total_facturas;
+      document.getElementById('kpiBultos').textContent = data.summary.total_bultos;
+      document.getElementById('kpiPiezas').textContent = data.summary.total_piezas;
+      document.getElementById('kpiPeso').textContent = data.summary.total_peso;
+      document.getElementById('kpiCBM').textContent = data.summary.total_cbm;
+
+      // Populate filter dropdown
+      invoiceFilter.innerHTML = '<option value="all">Ver todas las facturas consolidadas</option>';
+      currentInvoices.forEach((inv, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `Factura ${inv.n_fact} (${inv.cliente})`;
+        invoiceFilter.appendChild(opt);
+      });
+
+      renderTables('all');
+      resultsSection.classList.remove('hidden');
+      resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    invoiceFilter.addEventListener('change', (e) => {
+      renderTables(e.target.value);
+    });
+
+    function renderTables(filterIndex) {
+      tablesContainer.innerHTML = '';
+
+      const invoicesToRender = filterIndex === 'all' 
+        ? currentInvoices 
+        : [currentInvoices[parseInt(filterIndex)]];
+
+      invoicesToRender.forEach(inv => {
+        const tableCard = document.createElement('div');
+        tableCard.className = 'border border-slate-200 rounded-xl overflow-hidden shadow-sm';
+
+        let rowsHtml = '';
+        inv.rows.forEach(r => {
+          rowsHtml += `
+            <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-100 text-xs">
+              <td class="px-3 py-2 text-slate-700 whitespace-nowrap">${r.proveedor}</td>
+              <td class="px-3 py-2 text-center font-medium text-slate-900 whitespace-nowrap">${r.n_fact}</td>
+              <td class="px-3 py-2 text-slate-600 whitespace-nowrap">${r.cliente}</td>
+              <td class="px-3 py-2 text-center font-semibold text-slate-900">${r.nb}</td>
+              <td class="px-3 py-2 font-mono text-slate-700 whitespace-nowrap">${r.codigo}</td>
+              <td class="px-3 py-2 font-medium text-slate-800">${r.detalle}</td>
+              <td class="px-3 py-2 text-center text-slate-500">${r.uni}</td>
+              <td class="px-3 py-2 text-slate-700">${r.marca}</td>
+              <td class="px-3 py-2 text-right font-semibold text-blue-700">${r.cantidad}</td>
+              <td class="px-3 py-2 text-right font-semibold text-emerald-700">${r.peso}</td>
+              <td class="px-3 py-2 text-right font-semibold text-purple-700">${r.cbm}</td>
+            </tr>
+          `;
+        });
+
+        // Totals row in bold
+        const totalRowHtml = `
+          <tr class="bg-slate-100/90 font-bold border-t-2 border-slate-300 text-xs text-slate-900">
+            <td class="px-3 py-2.5">${inv.proveedor}</td>
+            <td class="px-3 py-2.5 text-center">${inv.n_fact}</td>
+            <td class="px-3 py-2.5">${inv.cliente}</td>
+            <td class="px-3 py-2.5 text-center">${inv.total_nb}</td>
+            <td class="px-3 py-2.5"></td>
+            <td class="px-3 py-2.5">TOTAL GENERAL</td>
+            <td class="px-3 py-2.5"></td>
+            <td class="px-3 py-2.5"></td>
+            <td class="px-3 py-2.5 text-right text-blue-800">${inv.total_qty}</td>
+            <td class="px-3 py-2.5 text-right text-emerald-800">${inv.total_peso}</td>
+            <td class="px-3 py-2.5 text-right text-purple-800">${inv.total_cbm}</td>
+          </tr>
+        `;
+
+        tableCard.innerHTML = `
+          <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+              <h4 class="font-bold text-slate-900 text-sm">FACTURA ${inv.n_fact} &bull; ${inv.cliente}</h4>
+            </div>
+            <span class="text-xs text-slate-500">${inv.rows.length} líneas agrupadas</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-100/80 text-[11px] font-bold text-slate-600 uppercase border-b border-slate-200">
+                  <th class="px-3 py-2.5">PROVEEDOR</th>
+                  <th class="px-3 py-2.5 text-center">N° FACT</th>
+                  <th class="px-3 py-2.5">CLIENTE</th>
+                  <th class="px-3 py-2.5 text-center">NB</th>
+                  <th class="px-3 py-2.5">CODIGO</th>
+                  <th class="px-3 py-2.5">DETALLE</th>
+                  <th class="px-3 py-2.5 text-center">UNI</th>
+                  <th class="px-3 py-2.5">MARCA</th>
+                  <th class="px-3 py-2.5 text-right">CANTIDA</th>
+                  <th class="px-3 py-2.5 text-right">PESO</th>
+                  <th class="px-3 py-2.5 text-right">CBM</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+                ${totalRowHtml}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        tablesContainer.appendChild(tableCard);
+      });
+    }
+
+    // Modal Diccionario Logic
+    const dictModal = document.getElementById('dictModal');
+    const openDictBtn = document.getElementById('openDictBtn');
+    const closeDictBtn = document.getElementById('closeDictBtn');
+    const dictList = document.getElementById('dictList');
+    const addRuleBtn = document.getElementById('addRuleBtn');
+    const newKeyInput = document.getElementById('newKeyInput');
+    const newStandardInput = document.getElementById('newStandardInput');
+
+    openDictBtn.addEventListener('click', async () => {
+      dictModal.classList.remove('hidden');
+      loadDictionary();
+    });
+
+    closeDictBtn.addEventListener('click', () => {
+      dictModal.classList.add('hidden');
+    });
+
+    async function loadDictionary() {
+      dictList.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">Cargando diccionario...</p>';
+      try {
+        const res = await fetch('/api/dictionary');
+        const data = await res.json();
+        renderDictionary(data);
+      } catch (e) {
+        dictList.innerHTML = `<p class="text-xs text-red-500 py-2">Error al cargar: ${e.message}</p>`;
+      }
+    }
+
+    function renderDictionary(data) {
+      dictList.innerHTML = '';
+      const learned = data.learned_mappings || {};
+      const exact = data.exact_mappings || {};
+
+      const learnedKeys = Object.keys(learned);
+      const exactKeys = Object.keys(exact);
+
+      let html = '';
+
+      if (learnedKeys.length > 0) {
+        html += `<div class="mb-4"><h5 class="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-2">⭐ Repuestos Aprendidos Automáticamente (${learnedKeys.length})</h5><div class="space-y-1.5 max-h-48 overflow-y-auto">`;
+        learnedKeys.forEach(k => {
+          html += `
+            <div class="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs">
+              <span class="font-medium text-slate-700 truncate max-w-xs">${k}</span>
+              <span class="font-bold text-emerald-800 bg-white px-2 py-0.5 rounded shadow-xs">➔ ${learned[k]}</span>
+            </div>
+          `;
+        });
+        html += `</div></div>`;
+      }
+
+      html += `<div><h5 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Reglas Base Configuradas (${exactKeys.length})</h5><div class="space-y-1.5 max-h-56 overflow-y-auto">`;
+      exactKeys.forEach(k => {
+        html += `
+          <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+            <span class="font-medium text-slate-700 truncate max-w-xs">${k}</span>
+            <span class="font-bold text-blue-700 bg-white px-2 py-0.5 rounded shadow-xs">➔ ${exact[k]}</span>
+          </div>
+        `;
+      });
+      html += `</div></div>`;
+
+      dictList.innerHTML = html;
+    }
+
+    addRuleBtn.addEventListener('click', async () => {
+      const key = newKeyInput.value.trim();
+      const standard = newStandardInput.value.trim();
+
+      if (!key || !standard) {
+        alert("Por favor completa ambos campos.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/dictionary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, standard })
+        });
+        const resData = await res.json();
+        if (resData.success) {
+          newKeyInput.value = '';
+          newStandardInput.value = '';
+          loadDictionary();
+        } else {
+          alert("Error: " + (resData.error || "No se pudo guardar"));
+        }
+      } catch (e) {
+        alert("Error de conexión: " + e.message);
+      }
+    });
+  </script>
+
+  <!-- Dictionary Modal -->
+  <div id="dictModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">📚</div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Diccionario de Repuestos y Auto-Aprendizaje</h3>
+            <p class="text-xs text-slate-500">Reglas para limpiar y homologar nombres de repuestos</p>
+          </div>
+        </div>
+        <button id="closeDictBtn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Add New Rule Form -->
+      <div class="p-5 border-b border-slate-200 bg-blue-50/50">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2.5">Agregar o Corregir una Regla Manualmente</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-[11px] font-medium text-slate-500 mb-1">Palabra o texto en la factura:</label>
+            <input type="text" id="newKeyInput" placeholder="Ej: FILTRO GASOLINA" class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none uppercase font-mono">
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-500 mb-1">Nombre estandarizado deseado:</label>
+            <input type="text" id="newStandardInput" placeholder="Ej: FILTRO DE COMBUSTIBLE" class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none uppercase font-mono">
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button id="addRuleBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs">
+            Guardar Regla en Memoria
+          </button>
+        </div>
+      </div>
+
+      <!-- List of Mappings -->
+      <div class="p-5 overflow-y-auto flex-1" id="dictList">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="p-4 border-t border-slate-200 bg-slate-50 text-right">
+        <p class="text-xs text-slate-400">Las reglas se guardan en <code>C:\Facturas_Repuestos\diccionario_repuestos.json</code></p>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

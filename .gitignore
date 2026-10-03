@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+app/uploads/*
+!app/uploads/.gitkeep
+Salida/*
+!Salida/.gitkeep
+Entrada/*
+!Entrada/.gitkeep
+Ejemplos/*
+!Ejemplos/.gitkeep
+.env
