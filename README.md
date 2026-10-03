@@ -1,5 +1,7 @@
 # Sistema de Procesamiento de Facturas y Listas de Empaque
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jesusybs/procesador-facturas)
+
 Este sistema procesa documentos logísticos (facturas y packing lists en formato PDF o Excel) aplicando limpieza de descripciones, agrupación por bulto/marca/detalle y sumatorias con cuadre matemático exacto.
 
 ## 🚀 Opciones de Uso
