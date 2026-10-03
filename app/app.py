@@ -24,7 +24,8 @@ from procesador_facturas import (
     export_invoices_to_excel,
     format_number_es,
     load_dictionary,
-    save_learned_mapping
+    save_learned_mapping,
+    deduplicate_invoices
 )
 
 app = Flask(__name__)
@@ -87,8 +88,9 @@ def process_files():
                 'error': str(e)
             })
 
+    all_invoices = [inv for inv in deduplicate_invoices(all_invoices) if inv.get('items')]
     if not all_invoices:
-        return jsonify({'error': 'No se pudo procesar ninguna factura de los archivos cargados.'}), 400
+        return jsonify({'error': 'No se encontraron facturas o listas de empaque válidas para procesar.'}), 400
 
     # Generar el Excel consolidado
     output_excel = os.path.join(OUTPUT_FOLDER, "CONSOLIDADO_FACTURAS.xlsx")
