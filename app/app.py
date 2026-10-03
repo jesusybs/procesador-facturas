@@ -14,6 +14,7 @@ from threading import Timer
 
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import HTTPException
 
 # Agregar directorio padre para importar procesador_facturas
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -171,6 +172,8 @@ def process_files():
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    if isinstance(e, HTTPException):
+        return e
     import traceback
     traceback.print_exc()
     return jsonify({'error': f'Error en el servidor: {str(e)}'}), 500
