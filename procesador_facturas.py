@@ -93,6 +93,7 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bTERM(?:INAL)?\.?\s*INT\b', 'TERMINAL INTERIOR'),
     (r'\bTIJERA\s+TRAS\b', 'MESETA/TIJERA TRASERA'),
     (r'\bTIJERA\b', 'MESETA/TIJERA'),
+    (r'\b(?:BRZO|BRAZO)[\.\s]+INF(?:ERIOR)?\b', 'MESETA/TIJERA'),
     (r'\bBOMBA[\.\s]+GAS\b', 'BOMBA DE GASOLINA'),
     (r'\bBOMBA[\.\s]+AGUA\b', 'BOMBA DE AGUA'),
     (r'\bB\/AGUA\b', 'BOMBA DE AGUA'),
@@ -135,6 +136,8 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bTUBO\s+(?:DE\s+)?CALEFACCION\b', 'TUBO DE CALEFACCION'),
     (r'\b(?:RETEN|RETENES|RETENEDOR|RETENEDORA|RETENEDORES|RETENEDORAS|OIL\s+SEAL|SEAL\s+OIL)\b', 'RETENEDOR'),
     (r'(?<!MET\.)\bRET[\.\/](?!AGUA|ACEIT)', 'RETENEDOR'),
+    (r'\b(?:EMP(?:ACADURA)?|EMPAQUE|JUNTA)[\.\s]+(?:DE\s+)?TAPA[\.\s]+(?:DE\s+)?VALV(?:ULA)?\b', 'EMPAQUE TAPA VALVULA'),
+    (r'\bTAPA[\.\s]+(?:DE\s+)?VALV(?:ULA)?\b', 'TAPA DE VALVULA'),
     (r'\bEMP(?:ACADURA)?\.?\s*COMPLETO\b', 'EMPACADURA COMPLETA (JUEGO)'),
     (r'\bEMP(?:ACADURA)?\.?\s*CULATA\b', 'EMPACADURA DE CULATA'),
     (r'\bCADENA\s+(?:TPO|TIEMPO)\b', 'CADENA DE TIEMPO'),
@@ -164,7 +167,15 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bCASQ(?:UILLO)?[\.\s]+BIELA\b', 'CASQUILLO DE BIELA'),
     (r'\bCASQ(?:UILLO)?[\.\s]+BANC(?:ADA)?\b', 'CASQUILLO DE BANCADA'),
     (r'\b(?:JG[\.\s]*)?A?NIO?LLOS\b', 'ANILLOS'),
-    (r'\bPISTON\b', 'PISTON')
+    (r'\bPISTON\b', 'PISTON'),
+    (r'\bFILT(?:RO)?[\.\s]+AIRE\b', 'FILTRO DE AIRE'),
+    (r'\bFILT(?:RO)?[\.\s]+(?:DE\s+)?GAS(?:OLINA)?\b', 'FILTRO DE GASOLINA'),
+    (r'\bBOTA[\.\s]+CREMALL(?:ERA)?\b', 'GUARDAPOLVO DE CREMALLERA'),
+    (r'\bGUIA[\.\s]+.*?\bVALV(?:ULA)?\b', 'GUIA DE VALVULA'),
+    (r'\b[VB]ARILLA[\.\s]+(?:MEDIDOR(?:A)?[\.\s]+)?ACE[IT]', 'VARILLA DE ACEITE'),
+    (r'\bP[\/\.\s]+EJE[\.\s]+INT\b', 'PUNTA DE EJE INTERIOR'),
+    (r'\bCUBO[\.\s]+(?:RDA[\.\s]+)?DEL\b', 'HUB DELANTERO'),
+    (r'\bMOTOR[\.\s]+ARRANQ(?:UE)?\b', 'MOTOR DE ARRANQUE')
 ]
 
 def auto_standardize_unknown_part(raw_desc):
