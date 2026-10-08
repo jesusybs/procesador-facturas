@@ -48,8 +48,8 @@ def index():
 @app.route('/api/version')
 def get_version():
     return jsonify({
-        'version': '2.0.0',
-        'providers': ['PERFECT TRADING', 'STAR AUTO PARTS, S.A.'],
+        'version': '2.2.0',
+        'providers': ['PERFECT TRADING', 'STAR AUTO PARTS, S.A.', 'JAPAN INTERNATIONAL', 'ADK CORPORATION', 'NIKOMOTO, S.A.'],
         'status': 'online'
     })
 

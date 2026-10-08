@@ -74,6 +74,8 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bTIJERA\s+TRAS\b', 'MESETA/TIJERA TRASERA'),
     (r'\bTIJERA\b', 'MESETA/TIJERA'),
     (r'\bBOMBA[\.\s]+GAS\b', 'BOMBA DE GASOLINA'),
+    (r'\bBOMBA[\.\s]+AGUA\b', 'BOMBA DE AGUA'),
+    (r'\bB\/AGUA\b', 'BOMBA DE AGUA'),
     (r'\bBOMBA[\.\s]+FRENO\b', 'BOMBA FRENO'),
     (r'\bCREMALLERA\b', 'CREMALLERA DE DIRECCION'),
     (r'\bPUNTA[\.\s]+FLECHA\b', 'PUNTA FLECHA'),
@@ -93,7 +95,18 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bCIL(?:INDRO)?[\.\s]+FRENO\b', 'CILINDRO DE FRENO'),
     (r'\bFREE\s+WHEEL\b', 'CUBO MANUAL / FREE WHEEL'),
     (r'\bLINK\b', 'TERMINAL ESTABILIZADOR'),
-    (r'\bRETEN\s+RDA\b', 'RETENEDOR')
+    (r'\bRETEN\s+RDA\b', 'RETENEDOR'),
+    (r'\bEMP(?:ACADURA)?\.?\s*COMPLETO\b', 'EMPACADURA COMPLETA (JUEGO)'),
+    (r'\bEMP(?:ACADURA)?\.?\s*CULATA\b', 'EMPACADURA DE CULATA'),
+    (r'\bCADENA\s+(?:TPO|TIEMPO)\b', 'CADENA DE TIEMPO'),
+    (r'\bCULATA(?:\s+MOTOR)?\b', 'CULATA DE MOTOR'),
+    (r'\bTAPON\s+(?:DE\s+)?(?:CARTER|RAD|RADIADOR)\b', 'TAPON'),
+    (r'\bSELLO(?:S)?\s+VALVULA\b', 'SELLOS DE VALVULA'),
+    (r'\bSELLO(?:S)?\s+BUJIA\b', 'SELLOS DE BUJIA'),
+    (r'\bTACO\s+(?:DE\s+)?FRENO\b', 'PASTILLA/TACO DE FRENO'),
+    (r'\bASPA\s+VENTILADORA?\b', 'ASPA DE VENTILADOR'),
+    (r'\bBOMBILLO|FOCO\b', 'BOMBILLO / FOCO'),
+    (r'\bSOCKET\b', 'SOCKET / CONECTOR')
 ]
 
 def auto_standardize_unknown_part(raw_desc):
@@ -253,6 +266,7 @@ def detect_provider(pdf_path):
     """
     Detecta automáticamente el proveedor del documento PDF:
     - STAR AUTO PARTS, S.A.
+    - JAPAN INTERNATIONAL (Pedidos WO- / WO_LY-)
     - PERFECT TRADING
     """
     try:
@@ -262,6 +276,8 @@ def detect_provider(pdf_path):
             p0 = (reader.pages[0].extract_text() or "").upper()
             if "STAR AUTO PARTS" in p0 or "1158018-1-573227" in p0 or ("ZONA LIBRE DE COL" in p0 and "STAR" in p0):
                 return "STAR_AUTO_PARTS"
+            if "JAPAN INTERNATIONAL" in p0 or "WO-" in p0 or "WO_LY-" in p0 or ("PEDIDO:" in p0 and "COTIZAC" in p0) or "ENX00" in p0:
+                return "JAPAN_INTERNATIONAL"
             if "PERFECT TRADING" in p0 or "COLON/OUT/" in p0:
                 return "PERFECT_TRADING"
     except Exception:
@@ -274,6 +290,8 @@ def detect_provider(pdf_path):
                 p0 = (pdf.pages[0].extract_text() or "").upper()
                 if "STAR AUTO PARTS" in p0 or "1158018-1-573227" in p0:
                     return "STAR_AUTO_PARTS"
+                if "JAPAN INTERNATIONAL" in p0 or "WO-" in p0 or "WO_LY-" in p0 or ("PEDIDO:" in p0 and "COTIZAC" in p0) or "ENX00" in p0:
+                    return "JAPAN_INTERNATIONAL"
     except Exception:
         pass
 
@@ -561,17 +579,685 @@ def parse_perfect_trading(pdf_path):
             'items': raw_items
         }]
 
+COUNTRIES_JAPAN_INT = [
+    "JAPON", "JAPÓN", "TAIWAN", "TAIWÁN", "CHINA", "INDIA", 
+    "COREA DEL SUR", "COREA", "TAILANDIA", "POLONIA", "ALEMANIA", 
+    "BRASIL", "MALASIA", "INDONESIA", "MEXICO", "MÉXICO", "USA", "EEUU"
+]
+
+def parse_japan_international(pdf_path):
+    """
+    Extrae facturas y repuestos para JAPAN INTERNATIONAL (Pedidos tipo WO- y WO_LY-).
+    Soporta formato por bultos TAG y formato directo/rango. Estandariza descripciones
+    y garantiza cuadre matemático exacto de CANTIDAD, PESO y CBM al centavo.
+    """
+    import pdfplumber
+
+    with pdfplumber.open(pdf_path) as pdf:
+        all_text = ""
+        for p in pdf.pages:
+            all_text += (p.extract_text() or "") + "\n"
+
+        cliente_m = re.search(r'Cliente:\s*(.*?)\s+Fecha:', all_text)
+        pedido_m = re.search(r'Pedido:\s*([^\n\r]+)', all_text)
+        bultos_m = re.search(r'Bultos:\s*(\d+)', all_text)
+        cant_m = re.search(r'Cantidad:\s*(\d+)', all_text)
+        peso_b_m = re.search(r'Peso Bruto:\s*([\d\.]+)', all_text)
+        cbm_m = re.search(r'Cubicaje m3:\s*([\d\.]+)', all_text)
+        marca_hdr_m = re.search(r'Marca:\s*([^\n\r]+?)(?:\s+Peso Neto:|\s+Cubicaje|$)', all_text)
+
+        cliente = cliente_m.group(1).strip() if cliente_m else ""
+        pedido = pedido_m.group(1).strip() if pedido_m else ""
+        hdr_bultos = int(bultos_m.group(1)) if bultos_m else 0
+        hdr_cant = Decimal(cant_m.group(1)) if cant_m else Decimal(0)
+        hdr_peso = Decimal(peso_b_m.group(1)) if peso_b_m else Decimal(0)
+        hdr_cbm = Decimal(cbm_m.group(1)) if cbm_m else Decimal(0)
+        hdr_marca = marca_hdr_m.group(1).strip() if marca_hdr_m else ""
+        if "AUTOREPUESTOS SAN" in hdr_marca:
+            hdr_marca = "AUTOREPUESTOS SAN JOSE"
+        if "PESO NETO" in hdr_marca.upper():
+            hdr_marca = ""
+
+        lines = []
+        for p in pdf.pages:
+            for l in (p.extract_text() or "").split("\n"):
+                l = l.strip()
+                if not l:
+                    continue
+                if any(l.startswith(k) for k in ["FECHA:", "USUARIO:", "Lista de Empaque", "Cliente:", "Bultos:", "Cantidad:", "Peso Bruto:", "Peso Neto:", "Cubicaje"]):
+                    continue
+                if re.search(r'P[aá\uFFFD]gina\s+\d+\s+de\s+\d+', l, re.IGNORECASE):
+                    continue
+                if l.startswith("No.") or l.startswith("Bulto Referencia") or l == ".":
+                    continue
+                lines.append(l)
+
+        raw_items = []
+        cur_bulto = 1
+        cur_bulto_peso = Decimal(0)
+        cur_bulto_cbm = Decimal(0)
+        cur_is_tag_box = False
+        bulto_items_temp = []
+
+        def flush_bulto():
+            nonlocal bulto_items_temp, cur_bulto_peso, cur_bulto_cbm
+            if not bulto_items_temp:
+                return
+            tot_q = sum(it['qty'] for it in bulto_items_temp)
+            if tot_q == 0:
+                tot_q = Decimal(1)
+            accum_p = Decimal(0)
+            accum_c = Decimal(0)
+            n_items = len(bulto_items_temp)
+            for idx, it in enumerate(bulto_items_temp):
+                if idx == n_items - 1:
+                    p = cur_bulto_peso - accum_p
+                    c = cur_bulto_cbm - accum_c
+                else:
+                    p = (cur_bulto_peso * (it['qty'] / tot_q)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    c = (cur_bulto_cbm * (it['qty'] / tot_q)).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                    accum_p += p
+                    accum_c += c
+                it['peso'] = p
+                it['cbm'] = c
+                raw_items.append(it)
+            bulto_items_temp = []
+
+        i = 0
+        while i < len(lines):
+            l = lines[i]
+
+            box_m = re.match(r'^(\d+)\s+R\d+\s+TAG\w+\s+(\d+)(?:\s+([\d\.]+)\s+([\d\.]+))?', l)
+            if box_m:
+                flush_bulto()
+                cur_bulto = int(box_m.group(1))
+                cur_is_tag_box = True
+                cur_bulto_peso = Decimal(box_m.group(3)) if box_m.group(3) else Decimal(0)
+                cur_bulto_cbm = Decimal(box_m.group(4)) if box_m.group(4) else Decimal(0)
+                i += 1
+                continue
+
+            style_b_m = re.search(r'(\d+)\s+(\d+)\s+UND$', l)
+            style_a_m = re.search(r'(?:(\d+)\s+)?(\d+)\s+([\d\.]+)\s+([\d\.]+)$', l)
+
+            if style_b_m:
+                cant = Decimal(style_b_m.group(2))
+                raw_prefix = l[:style_b_m.start()].strip()
+                tokens = raw_prefix.split()
+                pais_found = ""
+                marca_found = hdr_marca
+                code = tokens[0] if tokens else ""
+
+                full_end = " ".join(tokens[-3:]).upper()
+                if "COREA DEL SUR" in full_end:
+                    pais_found = "Corea del Sur"
+                    marca_idx = -4
+                else:
+                    last_token = tokens[-1].upper() if tokens else ""
+                    if any(c in last_token for c in COUNTRIES_JAPAN_INT):
+                        pais_found = tokens[-1]
+                        marca_idx = -2
+                    else:
+                        marca_idx = -1
+
+                if len(tokens) > abs(marca_idx):
+                    marca_found = tokens[marca_idx]
+                    raw_desc = " ".join(tokens[1:marca_idx])
+                else:
+                    raw_desc = " ".join(tokens[1:])
+
+                while i + 1 < len(lines):
+                    next_l = lines[i+1]
+                    if re.match(r'^(\d+)\s+R\d+\s+TAG', next_l) or re.search(r'(\d+)\s+(\d+)\s+UND$', next_l) or re.search(r'(?:(\d+)\s+)?(\d+)\s+([\d\.]+)\s+([\d\.]+)$', next_l):
+                        break
+                    raw_desc += " " + next_l
+                    i += 1
+
+                detalle = clean_detail(raw_desc)
+
+                bulto_items_temp.append({
+                    'nb': cur_bulto,
+                    'code': code,
+                    'detalle': detalle,
+                    'uni': 'PZA',
+                    'marca': marca_found or hdr_marca,
+                    'qty': cant,
+                    'peso': Decimal(0),
+                    'cbm': Decimal(0)
+                })
+
+            elif style_a_m and not re.match(r'^\d+\s+R\d+', l):
+                qty = Decimal(style_a_m.group(2))
+                peso = Decimal(style_a_m.group(3))
+                cbm = Decimal(style_a_m.group(4))
+                raw_prefix = l[:style_a_m.start()].strip()
+                while i + 1 < len(lines):
+                    next_l = lines[i+1]
+                    if re.match(r'^(\d+)\s+R\d+\s+TAG', next_l) or re.search(r'(\d+)\s+(\d+)\s+UND$', next_l) or re.search(r'(\d+)\s+([\d\.]+)\s+([\d\.]+)$', next_l):
+                        break
+                    raw_prefix += " " + next_l
+                    i += 1
+
+                if cur_is_tag_box:
+                    tokens = raw_prefix.split()
+                    if tokens and tokens[-1].isdigit():
+                        tokens = tokens[:-1]
+                    code = tokens[0] if tokens else ""
+                    raw_desc = " ".join(tokens[1:])
+                    detalle = clean_detail(raw_desc)
+
+                    raw_items.append({
+                        'nb': cur_bulto,
+                        'code': code,
+                        'detalle': detalle,
+                        'uni': 'PZA',
+                        'marca': hdr_marca,
+                        'qty': qty,
+                        'peso': peso,
+                        'cbm': cbm
+                    })
+                else:
+                    range_m = re.match(r'^(\d+)\s*[-aA]\s*(\d+)\s+(\S+)\s+(.*)', raw_prefix)
+                    single_nb_m = re.match(r'^(\d+)\s+([A-Za-z0-9][A-Za-z0-9\-_]*)\s+(.*)', raw_prefix)
+
+                    if range_m:
+                        start_b = int(range_m.group(1))
+                        end_b = int(range_m.group(2))
+                        count_b = end_b - start_b + 1
+                        code = range_m.group(3)
+                        desc_raw = range_m.group(4)
+                        desc = re.sub(r'\s+\d+$', '', desc_raw).strip()
+                        detalle = clean_detail(desc)
+
+                        qty_per = qty / count_b
+                        kg_per = (peso / count_b).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        cbm_per = (cbm / count_b).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                        kg_diff = peso - (kg_per * count_b)
+                        cbm_diff = cbm - (cbm_per * count_b)
+
+                        for b_idx, b_num in enumerate(range(start_b, end_b + 1)):
+                            raw_items.append({
+                                'nb': b_num,
+                                'code': code,
+                                'detalle': detalle,
+                                'uni': 'PZA',
+                                'marca': hdr_marca,
+                                'qty': qty_per,
+                                'peso': kg_per + (kg_diff if b_idx == count_b - 1 else Decimal(0)),
+                                'cbm': cbm_per + (cbm_diff if b_idx == count_b - 1 else Decimal(0))
+                            })
+                    elif single_nb_m:
+                        b_num = int(single_nb_m.group(1))
+                        code = single_nb_m.group(2)
+                        desc = re.sub(r'\s+\d+$', '', single_nb_m.group(3)).strip()
+                        detalle = clean_detail(desc)
+                        raw_items.append({
+                            'nb': b_num,
+                            'code': code,
+                            'detalle': detalle,
+                            'uni': 'PZA',
+                            'marca': hdr_marca,
+                            'qty': qty,
+                            'peso': peso,
+                            'cbm': cbm
+                        })
+                    else:
+                        tokens = raw_prefix.split()
+                        code = tokens[0] if tokens else ""
+                        raw_desc = " ".join(tokens[1:])
+                        detalle = clean_detail(raw_desc)
+                        raw_items.append({
+                            'nb': cur_bulto,
+                            'code': code,
+                            'detalle': detalle,
+                            'uni': 'PZA',
+                            'marca': hdr_marca,
+                            'qty': qty,
+                            'peso': peso,
+                            'cbm': cbm
+                        })
+
+            i += 1
+
+        flush_bulto()
+
+        sum_p = sum(it['peso'] for it in raw_items)
+        sum_c = sum(it['cbm'] for it in raw_items)
+        diff_p = hdr_peso - sum_p
+        diff_c = hdr_cbm - sum_c
+
+        if raw_items:
+            raw_items[-1]['peso'] += diff_p
+            raw_items[-1]['cbm'] += diff_c
+
+        return [{
+            'proveedor': 'JAPAN INTERNATIONAL',
+            'n_fact': pedido,
+            'cliente': cliente,
+            'items': raw_items
+        }]
+
 def parse_pdf(pdf_path):
     """Detecta automáticamente el proveedor del PDF y ejecuta el parser correspondiente."""
     prov = detect_provider(pdf_path)
     if prov == "STAR_AUTO_PARTS":
         return parse_star_auto_parts(pdf_path)
+    elif prov == "JAPAN_INTERNATIONAL":
+        return parse_japan_international(pdf_path)
     else:
         return parse_perfect_trading(pdf_path)
 
-def parse_excel(excel_path):
-    """Extrae las facturas y repuestos desde un archivo Excel."""
-    wb = openpyxl.load_workbook(excel_path, data_only=True)
+def parse_adk_excel(excel_path, wb=None):
+    """Extrae facturas y repuestos desde archivos Excel de ADK CORPORATION."""
+    if wb is None:
+        wb = openpyxl.load_workbook(excel_path, data_only=True)
+    ws = wb.active
+
+    proveedor = 'ADK CORPORATION'
+    factura = ''
+    cliente = ''
+
+    for r in range(1, min(16, ws.max_row + 1)):
+        for c in range(1, min(65, ws.max_column + 1)):
+            v = ws.cell(r, c).value
+            if v == 'Factura':
+                for offset in [8, 1, 2, 7]:
+                    val = ws.cell(r, c + offset).value
+                    if val and str(val).strip():
+                        factura = str(val).strip()
+                        break
+            elif v == 'Consignatario:':
+                for c2 in range(c + 1, min(c + 20, ws.max_column + 1)):
+                    v2 = ws.cell(r, c2).value
+                    if v2 and str(v2).strip():
+                        cliente = str(v2).strip()
+                        break
+
+    if not factura:
+        factura = str(ws.cell(12, 50).value or '').strip()
+    if not cliente:
+        cliente = str(ws.cell(10, 16).value or '').strip()
+    if not factura:
+        m = re.search(r'([A-Za-z0-9\-]+)', os.path.basename(excel_path))
+        if m:
+            factura = m.group(1)
+
+    tot_peso_hdr = Decimal(0)
+    tot_cbm_hdr = Decimal(0)
+
+    for r in range(ws.max_row, max(1, ws.max_row - 15), -1):
+        if str(ws.cell(r, 3).value or '').strip() == 'Total Bultos:':
+            tot_peso_hdr = parse_decimal_safe(ws.cell(r, 54).value)
+            tot_cbm_hdr = parse_decimal_safe(ws.cell(r, 66).value)
+            break
+
+    bultos = {}
+    cur_b_num = 1
+    cur_b_peso = Decimal(0)
+    cur_b_cbm = Decimal(0)
+
+    r = 16
+    while r <= ws.max_row:
+        if str(ws.cell(r, 3).value or '').strip() == 'Total Bultos:':
+            break
+
+        if ws.cell(r, 19).value == 'Bulto':
+            cur_b_num = int(ws.cell(r, 22).value or cur_b_num)
+            cur_b_peso = parse_decimal_safe(ws.cell(r, 51).value)
+            cur_b_cbm = parse_decimal_safe(ws.cell(r, 61).value)
+            bultos[cur_b_num] = {
+                'peso': cur_b_peso,
+                'cbm': cur_b_cbm,
+                'items': []
+            }
+            r += 1
+            continue
+
+        c2 = ws.cell(r, 2).value
+        c5 = ws.cell(r, 5).value
+        if c2 is not None and isinstance(c2, (int, float)) and c5:
+            code = str(c5).strip()
+            desc = str(ws.cell(r, 16).value or ws.cell(r, 21).value or '').strip()
+            marca = str(ws.cell(r, 33).value or ws.cell(r, 34).value or '').strip()
+
+            qty = Decimal(0)
+            if r + 1 <= ws.max_row and ws.cell(r + 1, 33).value is not None:
+                qty = parse_decimal_safe(ws.cell(r + 1, 33).value)
+
+            uni = 'PZA'
+            if cur_b_num not in bultos:
+                bultos[cur_b_num] = {'peso': Decimal(0), 'cbm': Decimal(0), 'items': []}
+
+            bultos[cur_b_num]['items'].append({
+                'code': code,
+                'desc': desc,
+                'marca': marca,
+                'qty': qty,
+                'uni': uni
+            })
+            r += 2
+            continue
+
+        r += 1
+
+    raw_items = []
+    for b_num, b_data in bultos.items():
+        b_items = b_data['items']
+        b_peso = b_data['peso']
+        b_cbm = b_data['cbm']
+        tot_q = sum(it['qty'] for it in b_items)
+        if tot_q == 0:
+            tot_q = Decimal(1)
+
+        accum_p = Decimal(0)
+        accum_c = Decimal(0)
+        n_it = len(b_items)
+        for idx, it in enumerate(b_items):
+            if idx == n_it - 1:
+                p = b_peso - accum_p
+                c = b_cbm - accum_c
+            else:
+                p = (b_peso * (it['qty'] / tot_q)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                c = (b_cbm * (it['qty'] / tot_q)).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                accum_p += p
+                accum_c += c
+
+            detalle = clean_detail(it['desc'])
+            raw_items.append({
+                'nb': b_num,
+                'code': it['code'],
+                'detalle': detalle,
+                'uni': it['uni'],
+                'marca': it['marca'],
+                'qty': it['qty'],
+                'peso': p,
+                'cbm': c
+            })
+
+    if tot_peso_hdr > 0 and raw_items:
+        sum_p = sum(it['peso'] for it in raw_items)
+        sum_c = sum(it['cbm'] for it in raw_items)
+        diff_p = tot_peso_hdr - sum_p
+        diff_c = tot_cbm_hdr - sum_c
+        raw_items[-1]['peso'] += diff_p
+        raw_items[-1]['cbm'] += diff_c
+
+    return [{
+        'proveedor': proveedor,
+        'n_fact': factura,
+        'cliente': cliente,
+        'items': raw_items
+    }]
+
+def parse_nikomoto_xlsx(excel_path, wb=None):
+    """Extrae facturas y repuestos desde archivos Excel .xlsx de NIKOMOTO, S.A."""
+    if wb is None:
+        wb = openpyxl.load_workbook(excel_path, data_only=True)
+    ws = wb.active
+
+    proveedor = 'NIKOMOTO, S.A.'
+    n_fact = ''
+    cliente = ''
+
+    for r in range(1, min(15, ws.max_row + 1)):
+        for c in range(1, min(20, ws.max_column + 1)):
+            v = str(ws.cell(r, c).value or '').strip()
+            if v.lower() == 'nombe':
+                for c2 in range(c + 1, min(c + 15, ws.max_column + 1)):
+                    v2 = ws.cell(r, c2).value
+                    if v2:
+                        cliente = str(v2).strip()
+                        break
+            elif v == 'Lista de Empaque':
+                for c2 in range(1, c):
+                    v2 = ws.cell(r, c2).value
+                    if v2:
+                        n_fact = str(v2).strip()
+                        break
+
+    if not n_fact:
+        n_fact = str(ws.cell(8, 4).value or '').strip()
+    if not n_fact:
+        m = re.search(r'(\d+)', os.path.basename(excel_path))
+        if m:
+            n_fact = m.group(1)
+
+    tot_p_hdr = Decimal(0)
+    tot_c_hdr = Decimal(0)
+    for r in range(ws.max_row, max(1, ws.max_row - 15), -1):
+        for c in range(1, 5):
+            if 'total de bultos' in str(ws.cell(r, c).value or '').lower():
+                tot_p_hdr = parse_decimal_safe(ws.cell(r, 34).value)
+                tot_c_hdr = parse_decimal_safe(ws.cell(r, 38).value)
+                break
+
+    bultos = {}
+    cur_b_key = '1'
+    cur_b_list = [1]
+    cur_b_p = Decimal(0)
+    cur_b_c = Decimal(0)
+
+    for r in range(14, ws.max_row + 1):
+        if 'total de bultos' in str(ws.cell(r, 2).value or '').lower():
+            break
+        if ws.cell(r, 16).value == 'Bulto':
+            b_start = int(ws.cell(r, 17).value or 1)
+            if str(ws.cell(r, 19).value or '').strip().lower() == 'al':
+                b_end = int(ws.cell(r, 21).value or b_start)
+            else:
+                b_end = b_start
+            cur_b_list = list(range(b_start, b_end + 1))
+            cur_b_p = parse_decimal_safe(ws.cell(r, 34).value)
+            cur_b_c = parse_decimal_safe(ws.cell(r, 38).value)
+            cur_b_key = f"{b_start}-{b_end}"
+            bultos[cur_b_key] = {
+                'b_list': cur_b_list,
+                'peso': cur_b_p,
+                'cbm': cur_b_c,
+                'items': []
+            }
+            continue
+
+        c1 = ws.cell(r, 1).value
+        c4 = ws.cell(r, 4).value
+        if c1 is not None and isinstance(c1, (int, float)) and c4:
+            code = str(c4).strip()
+            marca = str(ws.cell(r, 15).value or '').strip()
+            desc = str(ws.cell(r, 19).value or '').strip()
+            qty = parse_decimal_safe(ws.cell(r, 30).value)
+            if cur_b_key not in bultos:
+                bultos[cur_b_key] = {'b_list': [1], 'peso': Decimal(0), 'cbm': Decimal(0), 'items': []}
+            bultos[cur_b_key]['items'].append({
+                'code': code,
+                'marca': marca,
+                'desc': desc,
+                'qty': qty
+            })
+
+    raw_items = []
+    for b_key, b_data in bultos.items():
+        b_list = b_data['b_list']
+        b_items = b_data['items']
+        n_b = len(b_list)
+        b_p = b_data['peso']
+        b_c = b_data['cbm']
+        tot_q = sum(it['qty'] for it in b_items)
+        if tot_q == 0:
+            tot_q = Decimal(1)
+
+        for it in b_items:
+            q_per = it['qty'] / n_b
+            it_p_tot = b_p * (it['qty'] / tot_q)
+            it_c_tot = b_c * (it['qty'] / tot_q)
+            p_per = (it_p_tot / n_b).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            c_per = (it_c_tot / n_b).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+            p_diff = it_p_tot - (p_per * n_b)
+            c_diff = it_c_tot - (c_per * n_b)
+
+            detalle = clean_detail(it['desc'])
+            for b_idx, b_num in enumerate(b_list):
+                raw_items.append({
+                    'nb': b_num,
+                    'code': it['code'],
+                    'detalle': detalle,
+                    'uni': 'PZA',
+                    'marca': it['marca'],
+                    'qty': q_per,
+                    'peso': p_per + (p_diff if b_idx == n_b - 1 else Decimal(0)),
+                    'cbm': c_per + (c_diff if b_idx == n_b - 1 else Decimal(0))
+                })
+
+    if tot_p_hdr > 0 and raw_items:
+        sum_p = sum(it['peso'] for it in raw_items)
+        sum_c = sum(it['cbm'] for it in raw_items)
+        diff_p = tot_p_hdr - sum_p
+        diff_c = tot_c_hdr - sum_c
+        raw_items[-1]['peso'] += diff_p
+        raw_items[-1]['cbm'] += diff_c
+
+    return [{
+        'proveedor': proveedor,
+        'n_fact': n_fact,
+        'cliente': cliente,
+        'items': raw_items
+    }]
+
+def parse_excel_xls(excel_path):
+    """Extrae facturas y repuestos desde archivos Excel binarios .xls (utilizando xlrd)."""
+    import xlrd
+
+    wb = xlrd.open_workbook(excel_path)
+    sh = wb.sheet_by_index(0)
+
+    proveedor = 'NIKOMOTO, S.A.'
+    n_fact = ''
+    cliente = ''
+
+    for r in range(min(15, sh.nrows)):
+        for c in range(min(20, sh.ncols)):
+            v = str(sh.cell_value(r, c)).strip()
+            if v.lower() == 'nombe':
+                for c2 in range(c + 1, min(c + 15, sh.ncols)):
+                    v2 = sh.cell_value(r, c2)
+                    if v2:
+                        cliente = str(v2).strip()
+                        break
+            elif v == 'Lista de Empaque':
+                for c2 in range(0, c):
+                    v2 = sh.cell_value(r, c2)
+                    if v2:
+                        n_fact = str(v2).strip()
+                        break
+
+    if not n_fact:
+        m = re.search(r'([A-Za-z0-9\-]+)', os.path.basename(excel_path))
+        if m:
+            n_fact = m.group(1)
+
+    tot_p_hdr = Decimal(0)
+    tot_c_hdr = Decimal(0)
+    for r in range(sh.nrows - 1, max(0, sh.nrows - 15), -1):
+        for c in range(min(5, sh.ncols)):
+            if 'total de bultos' in str(sh.cell_value(r, c)).lower():
+                tot_p_hdr = parse_decimal_safe(sh.cell_value(r, 33))
+                tot_c_hdr = parse_decimal_safe(sh.cell_value(r, 37))
+                break
+
+    bultos = {}
+    cur_b_key = '1'
+    cur_b_list = [1]
+    cur_b_p = Decimal(0)
+    cur_b_c = Decimal(0)
+
+    for r in range(14, sh.nrows):
+        if 'total de bultos' in str(sh.cell_value(r, 1)).lower():
+            break
+        if str(sh.cell_value(r, 15)).strip().lower() == 'bulto':
+            b_start = int(float(sh.cell_value(r, 16) or 1))
+            if str(sh.cell_value(r, 17)).strip().lower() == 'al':
+                b_end = int(float(sh.cell_value(r, 18) or b_start))
+            else:
+                b_end = b_start
+            cur_b_list = list(range(b_start, b_end + 1))
+            cur_b_p = parse_decimal_safe(sh.cell_value(r, 33))
+            cur_b_c = parse_decimal_safe(sh.cell_value(r, 37))
+            cur_b_key = f"{b_start}-{b_end}"
+            bultos[cur_b_key] = {
+                'b_list': cur_b_list,
+                'peso': cur_b_p,
+                'cbm': cur_b_c,
+                'items': []
+            }
+            continue
+
+        c0 = sh.cell_value(r, 0)
+        c3 = sh.cell_value(r, 3)
+        if c0 != '' and isinstance(c0, (int, float)) and c3:
+            code = str(c3).strip()
+            marca = str(sh.cell_value(r, 14) or '').strip()
+            desc = str(sh.cell_value(r, 18) or '').strip()
+            qty = parse_decimal_safe(sh.cell_value(r, 29))
+            if cur_b_key not in bultos:
+                bultos[cur_b_key] = {'b_list': [1], 'peso': Decimal(0), 'cbm': Decimal(0), 'items': []}
+            bultos[cur_b_key]['items'].append({
+                'code': code,
+                'marca': marca,
+                'desc': desc,
+                'qty': qty
+            })
+
+    raw_items = []
+    for b_key, b_data in bultos.items():
+        b_list = b_data['b_list']
+        b_items = b_data['items']
+        n_b = len(b_list)
+        b_p = b_data['peso']
+        b_c = b_data['cbm']
+        tot_q = sum(it['qty'] for it in b_items)
+        if tot_q == 0:
+            tot_q = Decimal(1)
+
+        for it in b_items:
+            q_per = it['qty'] / n_b
+            it_p_tot = b_p * (it['qty'] / tot_q)
+            it_c_tot = b_c * (it['qty'] / tot_q)
+            p_per = (it_p_tot / n_b).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            c_per = (it_c_tot / n_b).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+            p_diff = it_p_tot - (p_per * n_b)
+            c_diff = it_c_tot - (c_per * n_b)
+
+            detalle = clean_detail(it['desc'])
+            for b_idx, b_num in enumerate(b_list):
+                raw_items.append({
+                    'nb': b_num,
+                    'code': it['code'],
+                    'detalle': detalle,
+                    'uni': 'PZA',
+                    'marca': it['marca'],
+                    'qty': q_per,
+                    'peso': p_per + (p_diff if b_idx == n_b - 1 else Decimal(0)),
+                    'cbm': c_per + (c_diff if b_idx == n_b - 1 else Decimal(0))
+                })
+
+    if tot_p_hdr > 0 and raw_items:
+        sum_p = sum(it['peso'] for it in raw_items)
+        sum_c = sum(it['cbm'] for it in raw_items)
+        diff_p = tot_p_hdr - sum_p
+        diff_c = tot_c_hdr - sum_c
+        raw_items[-1]['peso'] += diff_p
+        raw_items[-1]['cbm'] += diff_c
+
+    return [{
+        'proveedor': proveedor,
+        'n_fact': n_fact,
+        'cliente': cliente,
+        'items': raw_items
+    }]
+
+def parse_standard_excel(excel_path, wb=None):
+    """Extrae las facturas y repuestos desde el formato estándar de Excel."""
+    if wb is None:
+        wb = openpyxl.load_workbook(excel_path, data_only=True)
     all_invoices = []
 
     for sheet_name in wb.sheetnames:
@@ -637,6 +1323,32 @@ def parse_excel(excel_path):
         all_invoices.extend(invoices_in_sheet.values())
 
     return all_invoices
+
+def parse_excel(excel_path):
+    """
+    Extrae facturas y repuestos desde archivos Excel (.xlsx o .xls).
+    Detecta automáticamente si es ADK CORPORATION, NIKOMOTO, S.A. o formato estándar.
+    """
+    ext = os.path.splitext(excel_path)[1].lower()
+    if ext == '.xls':
+        return parse_excel_xls(excel_path)
+
+    wb = openpyxl.load_workbook(excel_path, data_only=True)
+    ws = wb.active
+
+    header_text = ""
+    for r in range(1, min(15, ws.max_row + 1)):
+        for c in range(1, min(25, ws.max_column + 1)):
+            v = str(ws.cell(r, c).value or '')
+            if v:
+                header_text += " " + v.upper()
+
+    if "ADK CORPORATION" in header_text or "COCO SOLITO" in header_text or "CLAVE 8752" in header_text:
+        return parse_adk_excel(excel_path, wb=wb)
+    elif "NIKOMOTO" in header_text or "NIKOMOTOZL.COM" in header_text:
+        return parse_nikomoto_xlsx(excel_path, wb=wb)
+    else:
+        return parse_standard_excel(excel_path, wb=wb)
 
 def group_invoice_items(items):
     """Agrupa por (NB, DETALLE, MARCA) y conserva el primer código."""
