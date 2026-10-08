@@ -43,21 +43,38 @@ def load_dictionary():
     _DICTIONARY_CACHE = {"exact_mappings": {}, "learned_mappings": {}}
     return _DICTIONARY_CACHE
 
-def save_learned_mapping(raw_key, standardized_value):
-    """Guarda un nuevo repuesto aprendido en el archivo JSON."""
-    global _DICTIONARY_CACHE
+_DICTIONARY_DIRTY = False
+
+def flush_dictionary():
+    """Escribe los cambios del diccionario a disco si hubo modificaciones."""
+    global _DICTIONARY_CACHE, _DICTIONARY_DIRTY
+    if not _DICTIONARY_DIRTY or _DICTIONARY_CACHE is None:
+        return
+    try:
+        with open(DICT_PATH, "w", encoding="utf-8") as f:
+            json.dump(_DICTIONARY_CACHE, f, ensure_ascii=False, indent=2)
+        _DICTIONARY_DIRTY = False
+    except Exception as e:
+        print(f"[ERROR] Al guardar diccionario en disco: {e}", file=sys.stderr)
+
+def save_learned_mapping(raw_key, standardized_value, flush=True):
+    """Guarda un nuevo repuesto aprendido en el archivo JSON (con opción de buffer diferido)."""
+    global _DICTIONARY_CACHE, _DICTIONARY_DIRTY
     d = load_dictionary()
     if "learned_mappings" not in d:
         d["learned_mappings"] = {}
 
-    d["learned_mappings"][raw_key] = standardized_value
+    if d["learned_mappings"].get(raw_key) == standardized_value:
+        return
 
-    try:
-        with open(DICT_PATH, "w", encoding="utf-8") as f:
-            json.dump(d, f, ensure_ascii=False, indent=2)
-        print(f"[AUTO-APRENDIZAJE] Nuevo repuesto aprendido y guardado: '{raw_key}' -> '{standardized_value}'")
-    except Exception as e:
-        print(f"[ERROR] Al guardar repuesto aprendido: {e}", file=sys.stderr)
+    d["learned_mappings"][raw_key] = standardized_value
+    _DICTIONARY_DIRTY = True
+
+    if flush:
+        flush_dictionary()
+    else:
+        # Registro en memoria sin I/O bloqueante
+        pass
 
 # Patrones y reglas automotrices generales para estandarización instantánea
 GENERAL_AUTO_PATTERNS = [
@@ -248,8 +265,8 @@ def clean_detail(desc):
     # 4. REPUESTO NUEVO Y DESCONOCIDO: Motor de Auto-Estandarización Inteligente
     standardized = auto_standardize_unknown_part(raw)
     
-    # Guardar en memoria y persistir en JSON para las próximas facturas
-    save_learned_mapping(d_upper, standardized)
+    # Guardar en memoria (se escribe a disco al final del proceso)
+    save_learned_mapping(d_upper, standardized, flush=False)
     
     return standardized
 
@@ -1574,6 +1591,7 @@ def process_file(file_path):
         md = process_and_generate_markdown(inv)
         results.append(md)
 
+    flush_dictionary()
     return "\n\n".join(results)
 
 def process_folder(input_dir, output_dir):
@@ -1614,6 +1632,8 @@ def process_folder(input_dir, output_dir):
             print(f"[OK] Markdown guardado")
         except Exception as e:
             print(f"[ERROR]: {e}")
+
+    flush_dictionary()
 
     # Generar el Excel consolidado con TODOS los archivos
     if all_invoices:

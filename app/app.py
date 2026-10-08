@@ -26,6 +26,7 @@ from procesador_facturas import (
     format_number_es,
     load_dictionary,
     save_learned_mapping,
+    flush_dictionary,
     deduplicate_invoices
 )
 
@@ -40,6 +41,7 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 # Guardar la última ruta de excel generado en memoria de la sesión
 LAST_EXCEL_PATH = os.path.join(OUTPUT_FOLDER, "CONSOLIDADO_FACTURAS.xlsx")
 LAST_INVOICES_CACHE = []
+LAST_FILES_INFO_CACHE = []
 
 @app.route('/')
 def index():
@@ -48,10 +50,18 @@ def index():
 @app.route('/api/version')
 def get_version():
     return jsonify({
-        'version': '2.2.0',
+        'version': '2.3.0',
+        'build': 'batch-safe',
         'providers': ['PERFECT TRADING', 'STAR AUTO PARTS, S.A.', 'JAPAN INTERNATIONAL', 'ADK CORPORATION', 'NIKOMOTO, S.A.'],
         'status': 'online'
     })
+
+@app.route('/api/clear', methods=['POST'])
+def clear_session():
+    global LAST_INVOICES_CACHE, LAST_FILES_INFO_CACHE
+    LAST_INVOICES_CACHE = []
+    LAST_FILES_INFO_CACHE = []
+    return jsonify({'success': True})
 
 @app.route('/api/update_item', methods=['POST'])
 def update_item():
@@ -97,8 +107,10 @@ def update_item():
 
 @app.route('/api/process', methods=['POST'])
 def process_files():
-    global LAST_EXCEL_PATH, LAST_INVOICES_CACHE
+    global LAST_EXCEL_PATH, LAST_INVOICES_CACHE, LAST_FILES_INFO_CACHE
     
+    append_mode = request.form.get('append', 'false').lower() == 'true'
+
     if 'files[]' not in request.files:
         return jsonify({'error': 'No se enviaron archivos'}), 400
 
@@ -106,7 +118,7 @@ def process_files():
     if not uploaded_files or uploaded_files[0].filename == '':
         return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
 
-    all_invoices = []
+    new_invoices = []
     processed_files_info = []
 
     for file in uploaded_files:
@@ -127,7 +139,7 @@ def process_files():
             else:
                 invs = parse_excel(saved_path)
             
-            all_invoices.extend(invs)
+            new_invoices.extend(invs)
             processed_files_info.append({
                 'name': filename,
                 'invoices_count': len(invs),
@@ -140,13 +152,21 @@ def process_files():
                 'error': str(e)
             })
 
-    all_invoices = [inv for inv in deduplicate_invoices(all_invoices) if inv.get('items')]
+    if append_mode:
+        combined = deduplicate_invoices(LAST_INVOICES_CACHE + new_invoices)
+        LAST_FILES_INFO_CACHE.extend(processed_files_info)
+    else:
+        combined = deduplicate_invoices(new_invoices)
+        LAST_FILES_INFO_CACHE = list(processed_files_info)
+
+    all_invoices = [inv for inv in combined if inv.get('items')]
     if not all_invoices:
         return jsonify({'error': 'No se encontraron facturas o listas de empaque válidas para procesar.'}), 400
 
     LAST_INVOICES_CACHE = all_invoices
+    flush_dictionary()
 
-    # Generar el Excel consolidado
+    # Generar el Excel consolidado con todas las facturas
     output_excel = os.path.join(OUTPUT_FOLDER, "CONSOLIDADO_FACTURAS.xlsx")
     export_invoices_to_excel(all_invoices, output_excel)
     LAST_EXCEL_PATH = output_excel
@@ -203,7 +223,7 @@ def process_files():
 
     return jsonify({
         'success': True,
-        'files_info': processed_files_info,
+        'files_info': LAST_FILES_INFO_CACHE,
         'invoices': preview_data,
         'summary': {
             'total_facturas': len(all_invoices),

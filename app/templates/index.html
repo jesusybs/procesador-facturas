@@ -99,8 +99,12 @@
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
         </div>
-        <p class="text-sm font-semibold text-slate-800">Extrayendo datos y calculando cuadre perfecto...</p>
-        <p class="text-xs text-slate-400 mt-1">Estandarizando repuestos y dividiendo bultos múltiples con motor determinista</p>
+        <p id="loadingTitle" class="text-sm font-semibold text-slate-800">Extrayendo datos y calculando cuadre perfecto...</p>
+        <p id="loadingSubtitle" class="text-xs text-slate-400 mt-1">Estandarizando repuestos y dividiendo bultos múltiples con motor determinista</p>
+        <!-- Barra de progreso para lotes -->
+        <div id="progressBarContainer" class="hidden max-w-xs mx-auto mt-3 bg-slate-200 rounded-full h-2 overflow-hidden">
+          <div id="progressBarFill" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
       </div>
     </div>
 
@@ -371,47 +375,105 @@
       renderFilesList();
     });
 
-    // Process Submission
+    // Process Submission (con procesamiento por lotes automáticos para evitar timeouts)
+    const BATCH_SIZE = 3; // Procesa de 3 en 3 archivos para garantizar velocidad y evitar timeouts de 30s en nube
+
     processBtn.addEventListener('click', async () => {
       if (selectedFiles.length === 0) return;
-
-      const formData = new FormData();
-      selectedFiles.forEach(f => formData.append('files[]', f));
 
       processBtn.disabled = true;
       loadingIndicator.classList.remove('hidden');
       resultsSection.classList.add('hidden');
 
+      const totalFiles = selectedFiles.length;
+      const chunks = [];
+      for (let i = 0; i < totalFiles; i += BATCH_SIZE) {
+        chunks.push(selectedFiles.slice(i, i + BATCH_SIZE));
+      }
+      const totalBatches = chunks.length;
+
+      const loadingTitle = document.getElementById('loadingTitle');
+      const loadingSubtitle = document.getElementById('loadingSubtitle');
+      const progressBarContainer = document.getElementById('progressBarContainer');
+      const progressBarFill = document.getElementById('progressBarFill');
+
+      if (totalBatches > 1) {
+        if (progressBarContainer) progressBarContainer.classList.remove('hidden');
+        if (progressBarFill) progressBarFill.style.width = '0%';
+      } else {
+        if (progressBarContainer) progressBarContainer.classList.add('hidden');
+      }
+
+      let lastData = null;
+
       try {
-        const response = await fetch('/api/process', {
-          method: 'POST',
-          body: formData
-        });
+        for (let b = 0; b < totalBatches; b++) {
+          const batchFiles = chunks[b];
+          const isFirstBatch = (b === 0);
+          const percent = Math.round(((b) / totalBatches) * 100);
 
-        const rawText = await response.text();
-        let data;
-        try {
-          data = JSON.parse(rawText);
-        } catch (jsonErr) {
-          if (response.status === 502 || response.status === 503 || response.status === 504) {
-            alert("El servidor en la nube se estaba reiniciando/actualizando. Por favor espera 15 segundos y vuelve a presionar 'Procesar Facturas'.");
+          if (progressBarFill) progressBarFill.style.width = `${percent}%`;
+
+          if (totalBatches > 1) {
+            if (loadingTitle) loadingTitle.textContent = `Procesando lote ${b + 1} de ${totalBatches} (${batchFiles.length} archivos)...`;
+            if (loadingSubtitle) loadingSubtitle.textContent = `Avance: ${b * BATCH_SIZE} de ${totalFiles} archivos procesados`;
           } else {
-            alert("El servidor respondió con un error (" + response.status + "). Por favor intenta de nuevo.");
+            if (loadingTitle) loadingTitle.textContent = "Extrayendo datos y calculando cuadre perfecto...";
+            if (loadingSubtitle) loadingSubtitle.textContent = "Estandarizando repuestos y dividiendo bultos múltiples con motor determinista";
           }
-          return;
+
+          const formData = new FormData();
+          formData.append('append', isFirstBatch ? 'false' : 'true');
+          batchFiles.forEach(f => formData.append('files[]', f));
+
+          // Petición con reintento automático si el servidor se encuentra reiniciando
+          let response = null;
+          let rawText = '';
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              response = await fetch('/api/process', {
+                method: 'POST',
+                body: formData
+              });
+              rawText = await response.text();
+              if (response.ok) break;
+            } catch (netErr) {
+              if (attempt === 1) throw netErr;
+              await new Promise(r => setTimeout(r, 2000));
+            }
+          }
+
+          let data;
+          try {
+            data = JSON.parse(rawText);
+          } catch (jsonErr) {
+            if (response && (response.status === 502 || response.status === 503 || response.status === 504)) {
+              alert("El servidor en la nube se encuentra actualizando o reiniciando. Por favor espera 15 segundos y vuelve a presionar 'Procesar Facturas'.");
+            } else {
+              alert(`El servidor respondió con un error (${response ? response.status : 'desconocido'}). Por favor intenta de nuevo.`);
+            }
+            return;
+          }
+
+          if (!response.ok || data.error) {
+            alert("Aviso: " + (data.error || "Ocurrió un error inesperado al procesar los archivos."));
+            return;
+          }
+
+          lastData = data;
         }
 
-        if (!response.ok || data.error) {
-          alert("Aviso: " + (data.error || "Ocurrió un error inesperado al procesar los archivos."));
-          return;
+        if (progressBarFill) progressBarFill.style.width = '100%';
+        if (lastData) {
+          renderResults(lastData);
+          showToast(`¡Consolidación exitosa! Se procesaron los ${totalFiles} archivos correctamente.`, 'success');
         }
-
-        renderResults(data);
       } catch (err) {
-        alert("Error de conexión: " + err.message);
+        alert("Error de conexión al procesar los archivos: " + err.message);
       } finally {
         processBtn.disabled = false;
         loadingIndicator.classList.add('hidden');
+        if (progressBarContainer) progressBarContainer.classList.add('hidden');
       }
     });
 
