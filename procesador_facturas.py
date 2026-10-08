@@ -123,7 +123,21 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bTACO\s+(?:DE\s+)?FRENO\b', 'PASTILLA/TACO DE FRENO'),
     (r'\bASPA\s+VENTILADORA?\b', 'ASPA DE VENTILADOR'),
     (r'\bBOMBILLO|FOCO\b', 'BOMBILLO / FOCO'),
-    (r'\bSOCKET\b', 'SOCKET / CONECTOR')
+    (r'\bSOCKET\b', 'SOCKET / CONECTOR'),
+    (r'\bPOLEA\s+(?:TENS|TENSOR|TENSORA)\b', 'POLEA TENSORA'),
+    (r'\bPOLEA\b', 'POLEA'),
+    (r'\bTENSOR\b', 'TENSOR'),
+    (r'\bCORREA\s+(?:TPO|TIEMPO|T[\.\s]|T\b)', 'CORREA DE TIEMPO'),
+    (r'\bCORREA\s+(?:ALT|ALTERNADOR)\b', 'CORREA DE ALTERNADOR'),
+    (r'\bCORREA\s+(?:A\/C|AC|CLIMA)\b', 'CORREA DE AIRE ACONDICIONADO'),
+    (r'\bCORREA\s+MULTICANAL\b', 'CORREA MULTICANAL'),
+    (r'\bCORREA\b', 'CORREA'),
+    (r'\bVALV(?:ULA)?[\.\s]+ADM(?:ISION)?\b', 'VALVULA DE ADMISION'),
+    (r'\bVALV(?:ULA)?[\.\s]+ESC(?:APE)?\b', 'VALVULA DE ESCAPE'),
+    (r'\bVALV(?:ULA)?[\.\s]+PCV\b', 'VALVULA PCV'),
+    (r'\bCASQ(?:UILLO)?[\.\s]+BIELA\b', 'CASQUILLO DE BIELA'),
+    (r'\bCASQ(?:UILLO)?[\.\s]+BANC(?:ADA)?\b', 'CASQUILLO DE BANCADA'),
+    (r'\bJG[\.\s]*A?NILLOS\b', 'ANILLOS')
 ]
 
 def auto_standardize_unknown_part(raw_desc):
