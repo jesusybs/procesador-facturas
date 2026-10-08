@@ -99,6 +99,8 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bBOMBA[\.\s]+FRENO\b', 'BOMBA FRENO'),
     (r'\b(?:TAPA|CARCASA\s+TAPA)[\.\s]+RAD(?:IADOR)?\b', 'TAPA DE RADIADOR'),
     (r'\bTOMA[\.\s]+(?:DE\s+)?RAD(?:IADOR)?\b', 'TOMA DE RADIADOR'),
+    (r'\b(?:CARCAZA|CARCASA)[\.\s]+(?:DE\s+)?TERMOSTATO\b', 'CARCAZA TERMOSTATO'),
+    (r'\bTOMA[\.\s]+(?:DE\s+)?TERMOSTATO\b', 'TOMA TERMOSTATO'),
     (r'\bCUELLO[\.\s]+(?:DE\s+)?RELLENO\s+COOLANT\b', 'CUELLO RELLENO COOLANT'),
     (r'\bVALVULA\s+DE\s+AGUA\b', 'VALVULA DE AGUA'),
     (r'\bRAD(?:IADOR)?[\.\s]', 'RADIADOR DE AGUA'),
