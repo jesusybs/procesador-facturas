@@ -106,13 +106,18 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bCALIPER\b', 'CALIPER DE FRENO'),
     (r'\bMU[Ñ\uFFFD]EQUILLA\b', 'TERMINAL ESTABILIZADOR'),
     (r'\bBAL[\.\s]+AMORT\b', 'BALINERA/RODAMIENTO AMORTIGUADOR DELANTERO'),
-    (r'\bBAL(?:INERA)?\s+DEL\b', 'BALINERA DELANTERA'),
+    (r'\bBAL(?:INERA)?[\/\.\s]+(?:RDA[\/\.\s]+)?DEL\b', 'BALINERA DELANTERA'),
+    (r'\bBAL(?:INERA)?[\/\.\s]+(?:RDA[\/\.\s]+)?TRAS\b', 'BALINERA TRASERA'),
+    (r'\bBAL[\/\.\s]+RDA\b', 'BALINERA'),
+    (r'\bBAL(?:INERA|INERAS)?\b', 'BALINERA'),
+    (r'\bBEARING\b', 'BALINERA'),
     (r'\bBOTA\s+FLECHA\b', 'GUARDAPOLVO FLECHA'),
     (r'\bBUJE\s+BARRA\b', 'BUJE DE BARRA ESTABILIZADORA'),
     (r'\bCIL(?:INDRO)?[\.\s]+FRENO\b', 'CILINDRO DE FRENO'),
     (r'\bFREE\s+WHEEL\b', 'CUBO MANUAL / FREE WHEEL'),
     (r'\bLINK\b', 'TERMINAL ESTABILIZADOR'),
-    (r'\bRETEN\s+RDA\b', 'RETENEDOR'),
+    (r'\b(?:RETEN|RETENES|RETENEDOR|RETENEDORA|RETENEDORES|RETENEDORAS|OIL\s+SEAL|SEAL\s+OIL)\b', 'RETENEDOR'),
+    (r'\bRET[\.\/]', 'RETENEDOR'),
     (r'\bEMP(?:ACADURA)?\.?\s*COMPLETO\b', 'EMPACADURA COMPLETA (JUEGO)'),
     (r'\bEMP(?:ACADURA)?\.?\s*CULATA\b', 'EMPACADURA DE CULATA'),
     (r'\bCADENA\s+(?:TPO|TIEMPO)\b', 'CADENA DE TIEMPO'),
@@ -214,6 +219,8 @@ def auto_standardize_unknown_part(raw_desc):
         return "HUB DELANTERO"
     if cleaned.startswith("TAMBOR FRENO"):
         return "TAMBOR DE FRENO"
+    if cleaned.startswith("RETEN") or cleaned.startswith("RET ") or cleaned.startswith("OIL SEAL"):
+        return "RETENEDOR"
     if cleaned.startswith("BOMBA GAS"):
         return "BOMBA DE GASOLINA"
     if cleaned.startswith("GUARDAPOLVO"):
