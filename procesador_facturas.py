@@ -78,13 +78,16 @@ def save_learned_mapping(raw_key, standardized_value, flush=True):
 
 # Patrones y reglas automotrices generales para estandarización instantánea
 GENERAL_AUTO_PATTERNS = [
-    (r'\bAMORT(?:IGUADOR)?\s+DEL\b', 'AMORTIGUADOR DELANTERO'),
-    (r'\bAMORT(?:IGUADOR)?\s+TRAS\b', 'AMORTIGUADOR TRASERO'),
+    (r'\bTOPE\s+Y\s+CUBRE\s*POLVO\b', 'TOPE Y CUBREPOLVO AMORTIGUADOR'),
+    (r'\bAMORT(?:IGUADOR)?[\.\s]+DEL\b', 'AMORTIGUADOR DELANTERO'),
+    (r'\bAMORT(?:IGUADOR)?[\.\s]+(?:TRAS|TRS)\b', 'AMORTIGUADOR TRASERO'),
     (r'\bKIT[\.\s]+PIN\s+BUJES\b', 'KIT PIN BUJES'),
     (r'\bHUB\s+DEL\b', 'HUB DELANTERO'),
     (r'\bHUB\s+TRAS\b', 'HUB TRASERO'),
     (r'\bHUB\s+BAL\b', 'HUB CON BALINERA'),
     (r'\b(YOYOS\s+)?CINTA\s+(?:DE\s+)?TIMON\b', 'CINTA DE TIMON'),
+    (r'\b(?:TERM(?:INAL)?[\.\s]+(?:DE\s+)?CREM(?:AYERA|ALLERA)?|T[\/\.\s]+CREM(?:AYERA|ALLERA)?)\b', 'TERMINAL DE CREMALLERA'),
+    (r'\bTERM(?:INAL)?[\.\s]+(?:DE\s+)?ESTAB(?:ILIZADOR)?(?:[\.\s]+DEL|[\.\s]+TRAS)?\b', 'TERMINAL ESTABILIZADOR'),
     (r'\bTERM(?:INAL)?\.?\s*(?:EXT|EX)\b', 'TERMINAL EXTERIOR'),
     (r'\bTERM(?:INAL)?\.?\s*CREM\b', 'TERMINAL DE CREMALLERA'),
     (r'\bTERM(?:INAL)?\.?\s*INT\b', 'TERMINAL INTERIOR'),
@@ -94,7 +97,15 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bBOMBA[\.\s]+AGUA\b', 'BOMBA DE AGUA'),
     (r'\bB\/AGUA\b', 'BOMBA DE AGUA'),
     (r'\bBOMBA[\.\s]+FRENO\b', 'BOMBA FRENO'),
+    (r'\b(?:TAPA|CARCASA\s+TAPA)[\.\s]+RAD(?:IADOR)?\b', 'TAPA DE RADIADOR'),
+    (r'\bTOMA[\.\s]+(?:DE\s+)?RAD(?:IADOR)?\b', 'TOMA DE RADIADOR'),
+    (r'\bCUELLO[\.\s]+(?:DE\s+)?RELLENO\s+COOLANT\b', 'CUELLO RELLENO COOLANT'),
+    (r'\bVALVULA\s+DE\s+AGUA\b', 'VALVULA DE AGUA'),
+    (r'\bRAD(?:IADOR)?[\.\s]', 'RADIADOR DE AGUA'),
+    (r'\bCREM(?:ALLERA)?[\.,\s]', 'CREMALLERA DE DIRECCION'),
     (r'\bCREMALLERA\b', 'CREMALLERA DE DIRECCION'),
+    (r'\bCUERPO[\.\s]+(?:DE\s+)?ACEL(?:ERACION)?\b', 'CUERPO DE ACELERACION'),
+    (r'\bIN[YJ]ECTOR(?:ES)?\b', 'INYECTOR'),
     (r'\bPUNTA[\.\s]+FLECHA\b', 'PUNTA FLECHA'),
     (r'\bDISCO[\.\s]+FRENO\b', 'DISCO DE FRENO'),
     (r'\bDISCO\b', 'DISCO DE FRENO'),
@@ -113,11 +124,15 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bBEARING\b', 'BALINERA'),
     (r'\bBOTA\s+FLECHA\b', 'GUARDAPOLVO FLECHA'),
     (r'\bBUJE\s+BARRA\b', 'BUJE DE BARRA ESTABILIZADORA'),
+    (r'\bBUJE\b', 'BUJE'),
     (r'\bCIL(?:INDRO)?[\.\s]+FRENO\b', 'CILINDRO DE FRENO'),
     (r'\bFREE\s+WHEEL\b', 'CUBO MANUAL / FREE WHEEL'),
     (r'\bLINK\b', 'TERMINAL ESTABILIZADOR'),
+    (r'\b(?:TUBO|TUBERIA|MANGUERA)\s+(?:MET[\.\s]+)?RET(?:ORNO)?[\.\s]+AGUA\b', 'TUBO DE RETORNO DE AGUA'),
+    (r'\b(?:TUBO|TUBERIA|MANGUERA)\s+(?:MET(?:AL)?[\.\s]+)?AGUA\b', 'TUBO DE AGUA'),
+    (r'\bTUBO\s+(?:DE\s+)?CALEFACCION\b', 'TUBO DE CALEFACCION'),
     (r'\b(?:RETEN|RETENES|RETENEDOR|RETENEDORA|RETENEDORES|RETENEDORAS|OIL\s+SEAL|SEAL\s+OIL)\b', 'RETENEDOR'),
-    (r'\bRET[\.\/]', 'RETENEDOR'),
+    (r'(?<!MET\.)\bRET[\.\/](?!AGUA|ACEIT)', 'RETENEDOR'),
     (r'\bEMP(?:ACADURA)?\.?\s*COMPLETO\b', 'EMPACADURA COMPLETA (JUEGO)'),
     (r'\bEMP(?:ACADURA)?\.?\s*CULATA\b', 'EMPACADURA DE CULATA'),
     (r'\bCADENA\s+(?:TPO|TIEMPO)\b', 'CADENA DE TIEMPO'),
@@ -129,6 +144,7 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bASPA\s+VENTILADORA?\b', 'ASPA DE VENTILADOR'),
     (r'\b(?:BOMBILLO|FOCO|HALOGENO|F\/HALOGENO)\b', 'BOMBILLO / FOCO'),
     (r'\bSOCKET\b', 'SOCKET / CONECTOR'),
+    (r'\bPOLEA[\.\s]+(?:AJST|AJUSTE|TENS|TENSOR|TENSORA)[\.\s]*CORREA\b', 'POLEA TENSORA'),
     (r'\bPOLEA\s+(?:TENS|TENSOR|TENSORA)\b', 'POLEA TENSORA'),
     (r'\bPOLEA\b', 'POLEA'),
     (r'\b(?:TENSOR|TENSIONER)\b', 'TENSOR'),
@@ -139,12 +155,14 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bCORREA\s+(?:A\/C|AC|CLIMA)\b', 'CORREA DE AIRE ACONDICIONADO'),
     (r'\bCORREA\s+MULTICANAL\b', 'CORREA MULTICANAL'),
     (r'\bCORREA\b', 'CORREA'),
+    (r'\bVALV(?:ULA)?[\.\s]+(?:DE\s+)?PURGA\b', 'VALVULA DE PURGA'),
     (r'\bVALV(?:ULA)?[\.\s]+ADM(?:ISION)?\b', 'VALVULA DE ADMISION'),
     (r'\bVALV(?:ULA)?[\.\s]+ESC(?:APE)?\b', 'VALVULA DE ESCAPE'),
     (r'\bVALV(?:ULA)?[\.\s]+PCV\b', 'VALVULA PCV'),
     (r'\bCASQ(?:UILLO)?[\.\s]+BIELA\b', 'CASQUILLO DE BIELA'),
     (r'\bCASQ(?:UILLO)?[\.\s]+BANC(?:ADA)?\b', 'CASQUILLO DE BANCADA'),
-    (r'\bJG[\.\s]*A?NILLOS\b', 'ANILLOS')
+    (r'\b(?:JG[\.\s]*)?A?NIO?LLOS\b', 'ANILLOS'),
+    (r'\bPISTON\b', 'PISTON')
 ]
 
 def auto_standardize_unknown_part(raw_desc):
@@ -728,29 +746,42 @@ def parse_japan_international(pdf_path):
                 marca_found = hdr_marca
                 code = tokens[0] if tokens else ""
 
-                full_end = " ".join(tokens[-3:]).upper()
-                if "COREA DEL SUR" in full_end:
+                if len(tokens) >= 3 and tokens[-2].upper() == "COREA" and tokens[-1].upper() == "DEL":
                     pais_found = "Corea del Sur"
-                    marca_idx = -4
+                    marca_found = tokens[-3]
+                    raw_desc = " ".join(tokens[1:-3])
+                elif len(tokens) >= 4 and tokens[-3].upper() == "COREA" and tokens[-2].upper() == "DEL" and tokens[-1].upper() == "SUR":
+                    pais_found = "Corea del Sur"
+                    marca_found = tokens[-4]
+                    raw_desc = " ".join(tokens[1:-4])
+                elif len(tokens) >= 2 and any(c in tokens[-1].upper() for c in COUNTRIES_JAPAN_INT):
+                    pais_found = tokens[-1]
+                    marca_found = tokens[-2]
+                    raw_desc = " ".join(tokens[1:-2])
                 else:
-                    last_token = tokens[-1].upper() if tokens else ""
-                    if any(c in last_token for c in COUNTRIES_JAPAN_INT):
-                        pais_found = tokens[-1]
-                        marca_idx = -2
-                    else:
-                        marca_idx = -1
-
-                if len(tokens) > abs(marca_idx):
-                    marca_found = tokens[marca_idx]
-                    raw_desc = " ".join(tokens[1:marca_idx])
-                else:
-                    raw_desc = " ".join(tokens[1:])
+                    marca_found = tokens[-1] if tokens else hdr_marca
+                    raw_desc = " ".join(tokens[1:-1])
 
                 while i + 1 < len(lines):
-                    next_l = lines[i+1]
+                    next_l = lines[i+1].strip()
                     if re.match(r'^(\d+)\s+R\d+\s+TAG', next_l) or re.search(r'(\d+)\s+(\d+)\s+UND$', next_l) or re.search(r'(?:(\d+)\s+)?(\d+)\s+([\d\.]+)\s+([\d\.]+)$', next_l):
                         break
-                    raw_desc += " " + next_l
+                    next_tokens = next_l.split()
+                    if next_tokens:
+                        first_t = next_tokens[0]
+                        if marca_found and (code + first_t).endswith(marca_found):
+                            code = code + first_t
+                            next_tokens = next_tokens[1:]
+                        elif marca_found and (code + "-" + first_t).endswith(marca_found):
+                            code = code + "-" + first_t
+                            next_tokens = next_tokens[1:]
+                        elif len(first_t) <= 3 and not code.endswith("-") and (code.endswith("-KI") and first_t == "C" or code.endswith("-JO") and first_t == "MO"):
+                            code = code + first_t
+                            next_tokens = next_tokens[1:]
+                    if next_tokens and next_tokens[-1].upper() == 'SUR' and 'COREA' in pais_found.upper():
+                        next_tokens = next_tokens[:-1]
+                    if next_tokens:
+                        raw_desc += " " + " ".join(next_tokens)
                     i += 1
 
                 detalle = clean_detail(raw_desc)
