@@ -56,7 +56,7 @@
     <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm">
       <div class="text-center max-w-xl mx-auto mb-6">
         <h2 class="text-xl font-bold text-slate-900">Cargar Archivos de Facturas</h2>
-        <p class="text-sm text-slate-500 mt-1">Arrastra tus archivos PDF o listas de empaque en Excel. Puedes subir múltiples archivos al mismo tiempo.</p>
+        <p class="text-sm text-slate-500 mt-1">Arrastra tus archivos PDF, Word (.docx) o listas de empaque en Excel. Puedes subir múltiples archivos al mismo tiempo.</p>
       </div>
 
       <!-- Dropzone -->
@@ -67,10 +67,10 @@
           </svg>
         </div>
         <div>
-          <p class="text-base font-semibold text-slate-800">Arrastra aquí tus archivos PDF o Excel</p>
+          <p class="text-base font-semibold text-slate-800">Arrastra aquí tus archivos PDF, Word o Excel</p>
           <p class="text-xs text-slate-400 mt-1">o haz clic para explorar tus carpetas</p>
         </div>
-        <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xls" class="hidden">
+        <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xls,.docx" class="hidden">
       </div>
 
       <!-- Selected Files List -->
@@ -309,11 +309,11 @@
     function addFiles(files) {
       const validFiles = files.filter(f => {
         const ext = f.name.substring(f.name.lastIndexOf('.')).toLowerCase();
-        return ['.pdf', '.xlsx', '.xls'].includes(ext);
+        return ['.pdf', '.xlsx', '.xls', '.docx'].includes(ext);
       });
 
       if (validFiles.length === 0) {
-        alert("Por favor selecciona solo archivos PDF o Excel (.xlsx/.xls)");
+        alert("Por favor selecciona solo archivos PDF, Word (.docx) o Excel (.xlsx/.xls)");
         return;
       }
 
@@ -341,9 +341,16 @@
         const item = document.createElement('div');
         item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm';
         
-        const isPdf = file.name.toLowerCase().endsWith('.pdf');
-        const iconColor = isPdf ? 'text-rose-500 bg-rose-50' : 'text-emerald-500 bg-emerald-50';
-        const label = isPdf ? 'PDF' : 'XLS';
+        const fnameLower = file.name.toLowerCase();
+        let iconColor = 'text-emerald-500 bg-emerald-50';
+        let label = 'XLS';
+        if (fnameLower.endsWith('.pdf')) {
+          iconColor = 'text-rose-500 bg-rose-50';
+          label = 'PDF';
+        } else if (fnameLower.endsWith('.docx')) {
+          iconColor = 'text-blue-500 bg-blue-50';
+          label = 'DOCX';
+        }
 
         item.innerHTML = `
           <div class="flex items-center space-x-3 overflow-hidden">

@@ -94,7 +94,9 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bTIJERA\s+TRAS\b', 'MESETA/TIJERA TRASERA'),
     (r'\bTIJERA\b', 'MESETA/TIJERA'),
     (r'\b(?:BRZO|BRAZO)[\.\s]+INF(?:ERIOR)?\b', 'MESETA/TIJERA'),
-    (r'\b(?:BOMBA[\.\s]+GAS|B[\.\/\s]+GAS)\b', 'BOMBA DE GASOLINA'),
+    (r'\b(?:BOMBA?[\.\s]+(?:DE\s+)?GAS(?:OLINA)?|B[\.\/\s]+GAS(?:OLINA)?)\b', 'BOMBA DE GASOLINA'),
+    (r'\b(?:BOMBA?[\.\s]+ACEITE|B[\.\/\s]+ACEITE)\b', 'BOMBA DE ACEITE'),
+    (r'\bBOMBA[\.\s]+HIDRAUL(?:ICA)?\b', 'BOMBA HIDRAULICA'),
     (r'\bBOMBA[\.\s]+AGUA\b', 'BOMBA DE AGUA'),
     (r'\bB\/AGUA\b', 'BOMBA DE AGUA'),
     (r'\bBOMBA[\.\s]+FRENO\b', 'BOMBA FRENO'),
@@ -140,13 +142,16 @@ GENERAL_AUTO_PATTERNS = [
     (r'\b(?:EMP(?:ACADURA)?|EMPAQUE|JUNTA)[\.\s]+(?:DE\s+)?TAPA[\.\s]+(?:DE\s+)?VALV(?:ULA)?\b', 'EMPAQUE TAPA VALVULA'),
     (r'\bTAPA[\.\s]+(?:DE\s+)?VALV(?:ULA)?\b', 'TAPA DE VALVULA'),
     (r'\bEMP(?:ACADURA)?\.?\s*COMPLETO\b', 'EMPACADURA COMPLETA (JUEGO)'),
-    (r'\bEMP(?:ACADURA)?\.?\s*CULATA\b', 'EMPACADURA DE CULATA'),
+    (r'\bEMP(?:AQUE)?[\.\s]+OVER(?:HAUL)?\b', 'EMPACADURA COMPLETA (JUEGO)'),
+    (r'\bEMP(?:ACADURA)?[\.\s]+(?:CULATA|CABEZOTE)\b', 'EMPACADURA DE CULATA'),
+    (r'\b(?:JGO[\.\s]+)?CADENA[\.\/\s]+(?:DE\s+)?TIEMPO\b', 'CADENA DE TIEMPO'),
     (r'\bCADENA\s+(?:TPO|TIEMPO)\b', 'CADENA DE TIEMPO'),
     (r'\bCULATA(?:\s+MOTOR)?\b', 'CULATA DE MOTOR'),
     (r'\bTAPON\s+(?:DE\s+)?(?:CARTER|RAD|RADIADOR)\b', 'TAPON'),
     (r'\bSELLO(?:S)?\s+(?:DE\s+)?VALV(?:ULA)?\b', 'SELLOS DE VALVULA'),
     (r'\bSELLO(?:S)?\s+(?:DE\s+)?BUJIA(?:S)?\b', 'SELLOS DE BUJIA'),
     (r'\bTACO\s+(?:DE\s+)?FRENO\b', 'PASTILLA/TACO DE FRENO'),
+    (r'\bASPAS?\b', 'ASPA DE VENTILADOR'),
     (r'\bASPA\s+VENTILADORA?\b', 'ASPA DE VENTILADOR'),
     (r'\b(?:BOMBILLO|FOCO|HALOGENO|F\/HALOGENO)\b', 'BOMBILLO / FOCO'),
     (r'\bSOCKET\b', 'SOCKET / CONECTOR'),
@@ -156,7 +161,8 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bPOLEA\b', 'POLEA'),
     (r'\b(?:TENSOR|TENSIONER)\b', 'TENSOR'),
     (r'\bPLATO\s+(?:DE\s+)?(?:CLUTCH|EMBRAG(?:UE)?)\b', 'PLATO DE EMBRAGUE'),
-    (r'\b(?:CIL(?:INDRO)?[\.\s]+ESCLAVO|REP[\.\s]+ESCLAVO)\b', 'BOMBA AUXILIAR DE EMBRAGUE'),
+    (r'\b(?:CIL(?:INDRO)?[\.\s]+ESCLAVO|REP[\.\s]+ESCLAVO|CIL[\.\s]+AUXL[\.\s]+EMBRAG)\b', 'BOMBA AUXILIAR DE EMBRAGUE'),
+    (r'\bCIL(?:INDRO)?[\.\s]+(?:DE\s+)?EMBRA[GQ](?:UE)?\b', 'CILINDRO DE EMBRAGUE'),
     (r'\bCORREA\s+(?:TPO|TIEMPO|T[\.\s]|T\b)', 'CORREA DE TIEMPO'),
     (r'\bCORREA\s+(?:ALT|ALTERNADOR)\b', 'CORREA DE ALTERNADOR'),
     (r'\bCORREA\s+(?:A\/C|AC|CLIMA)\b', 'CORREA DE AIRE ACONDICIONADO'),
@@ -167,7 +173,7 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bVALV(?:ULA)?[\.\s]+ESC(?:APE)?\b', 'VALVULA DE ESCAPE'),
     (r'\bVALV(?:ULA)?[\.\s]+PCV\b', 'VALVULA PCV'),
     (r'\bCASQ(?:UILLO)?[\.\s]+BIELA\b', 'CASQUILLO DE BIELA'),
-    (r'\bCASQ(?:UILLO)?[\.\s]+BANC(?:ADA)?\b', 'CASQUILLO DE BANCADA'),
+    (r'\bCASQ(?:UILLO)?[\.\s]+(?:BANC(?:ADA)?|CIG(?:UE[Ñ\uFFFD]AL)?)\b', 'CASQUILLO DE BANCADA'),
     (r'\b(?:JG[\.\s]*)?A?NIO?LLOS\b', 'ANILLOS'),
     (r'\bPISTON\b', 'PISTON'),
     (r'\bFILT(?:RO)?[\.\s]+AIRE\b', 'FILTRO DE AIRE'),
@@ -177,7 +183,24 @@ GENERAL_AUTO_PATTERNS = [
     (r'\b[VB]ARILLA[\.\s]+(?:MEDIDOR(?:A)?[\.\s]+)?ACE[IT]', 'VARILLA DE ACEITE'),
     (r'\bP[\/\.\s]+EJE[\.\s]+INT\b', 'PUNTA DE EJE INTERIOR'),
     (r'\bCUBO[\.\s]+(?:RDA[\.\s]+)?DEL\b', 'HUB DELANTERO'),
-    (r'\bMOTOR[\.\s]+ARRANQ(?:UE)?\b', 'MOTOR DE ARRANQUE'),
+    (r'\b(?:MOTOR[\.\s]+ARRANQ(?:UE)?|ARRANQUE)\b', 'MOTOR DE ARRANQUE'),
+    (r'\b(?:AUT[\.\s]+ARR|AUTOMATICO[\.\s]+(?:DE\s+)?ARRANQUE)\b', 'AUTOMATICO DE ARRANQUE'),
+    (r'\bBENDIX(?:\s+ARRANQUE)?\b', 'BENDIX DE ARRANQUE'),
+    (r'\bCARBONERA(?:\s+ARR)?\b', 'CARBONERA'),
+    (r'\bALTERNADOR\b', 'ALTERNADOR'),
+    (r'\b(?:PUENTE[\.\s]+)?SOPORTE[\.\s]+CARDAN\b', 'SOPORTE DE CARDAN'),
+    (r'\bCARBURADOR\b', 'CARBURADOR'),
+    (r'\bCAUCHO(?:S)?[\.\s]+(?:DE\s+)?FRENO\b', 'CAUCHO DE FRENO'),
+    (r'\bREFORZADOR[\.\s]+(?:DE\s+)?FRENO\b', 'REFORZADOR DE FRENO'),
+    (r'\bREFORZADOR[\.\s]+(?:DE\s+)?EMBRA[GQ](?:UE)?\b', 'REFORZADOR DE EMBRAGUE'),
+    (r'\bFAN[\.\s]+CLUTCH\b', 'FAN CLUTCH'),
+    (r'\bHORQUILLA[\.\s]+(?:DE\s+)?EMBRA(?:GUE)?\b', 'HORQUILLA DE EMBRAGUE'),
+    (r'\bCABLE(?:S)?[\.\s]+(?:DE\s+)?BUJIA(?:S)?\b', 'CABLES DE BUJIA'),
+    (r'\bBUJIA(?:S)?\b', 'BUJIA'),
+    (r'\bCAMISA[\.\s]+(?:DE\s+)?(?:MOTOR|CILINDRO)?\b', 'CAMISA DE MOTOR'),
+    (r'\bCABALLITOS?\b', 'CABALLITOS / BALANCINES'),
+    (r'\bARO[\.\s]+SINCRONIZ(?:ADOR)?\b', 'ARO SINCRONIZADOR'),
+    (r'\bBULBO[\.\s]+(?:DE\s+)?TEMP(?:ERATURA)?\b', 'SENSOR DE TEMPERATURA'),
     (r'\bTAPA[\.\s]+(?:DE\s+)?DIST(?:RIB(?:UIDOR)?)?\b', 'TAPA DE DISTRIBUIDOR'),
     (r'\bROTOR[\.\s]+(?:DE\s+)?DIST(?:RIB(?:UIDOR)?)?\b', 'ROTOR DE DISTRIBUIDOR'),
     (r'\bCONDENSADOR\b', 'CONDENSADOR'),
@@ -187,6 +210,7 @@ GENERAL_AUTO_PATTERNS = [
     (r'\bSENSOR[\.\s]+(?:DE\s+)?VELOCIDAD\b', 'SENSOR DE VELOCIDAD'),
     (r'\bSENSOR[\.\s]+(?:DE\s+)?(?:POSIC(?:ION)?[\.\s]+)?EJE[\.\s]+(?:DE\s+)?LEVA[S]?\b', 'SENSOR DE EJE DE LEVAS'),
     (r'\bSENSOR[\.\s]+(?:DE\s+)?(?:POSIC(?:ION)?[\.\s]+)?CIG(?:UE[Ñ\uFFFD]AL)?\b', 'SENSOR DE CIGUEÑAL'),
+    (r'\bCIG(?:UE[Ñ\uFFFD]AL)?\b', 'CIGUEÑAL'),
     (r'\bDEPOSITO[\.\s]+LI[QD][\.\s]+HIDRAUL(?:ICO)?\b', 'DEPOSITO LIQUIDO HIDRAULICO'),
     (r'\bTUBERIA[\.\s]+.*EMBRAG(?:UE)?\b', 'TUBERIA DE EMBRAGUE'),
     (r'\bBIELA[\.\s]+(?:DE\s+)?MOTOR\b', 'BIELA DE MOTOR'),
@@ -377,6 +401,8 @@ def detect_provider(pdf_path):
                 p0 = (pdf.pages[0].extract_text() or "").upper()
                 if "STAR AUTO PARTS" in p0 or "1158018-1-573227" in p0:
                     return "STAR_AUTO_PARTS"
+                if "AJ INTERNATIONAL" in p0:
+                    return "AJ_INTERNATIONAL"
                 if "JAPAN INTERNATIONAL" in p0 or "WO-" in p0 or "WO_LY-" in p0 or ("PEDIDO:" in p0 and "COTIZAC" in p0) or "ENX00" in p0:
                     return "JAPAN_INTERNATIONAL"
     except Exception:
@@ -937,11 +963,155 @@ def parse_japan_international(pdf_path):
             'items': raw_items
         }]
 
+def parse_aj_international(pdf_path):
+    """
+    Extrae facturas y repuestos desde archivos PDF de AJ INTERNATIONAL GROUP, S.A.
+    Maneja múltiples bultos secuenciales y saltos de página con encabezados repetidos.
+    """
+    import pdfplumber
+
+    with pdfplumber.open(pdf_path) as pdf:
+        all_pages = []
+        for p in pdf.pages:
+            all_pages.append((p.extract_text() or '').split('\n'))
+
+    full_text = '\n'.join('\n'.join(lines) for lines in all_pages)
+
+    proveedor = "AJ INTERNATIONAL GROUP, S.A."
+    n_fact_m = re.search(r'FACTURA\s+No\.:\s*(\d+)', full_text)
+    cliente_m = re.search(r'Cliente:\s*(?:[\w\-]+\s*-\s*)?([^\n\r]+?)(?:\s+R\.U\.C|\s+Fecha|\n|$)', full_text)
+
+    n_fact = n_fact_m.group(1).strip() if n_fact_m else ""
+    cliente = cliente_m.group(1).strip() if cliente_m else ""
+
+    tot_p_m = re.search(r'Peso Final \(Kg\):\s*([\d\.]+)', full_text)
+    tot_c_m = re.search(r'Total M3:\s*([\d\.]+)', full_text)
+
+    hdr_peso = parse_decimal_safe(tot_p_m.group(1)) if tot_p_m else Decimal(0)
+    hdr_cbm = parse_decimal_safe(tot_c_m.group(1)) if tot_c_m else Decimal(0)
+
+    KNOWN_BRANDS = ['DDT USA', 'PSH - POLLAND', 'VULKO', 'NTS', 'ZM', 'GAUSS', 'ENZO', 'ZEN']
+
+    bulto_dict = {}
+    current_bulto_key = None
+    bulto_seq = 0
+
+    for p_lines in all_pages:
+        i = 0
+        while i < len(p_lines):
+            l = p_lines[i].strip()
+            if not l:
+                i += 1
+                continue
+
+            b_m = re.search(r'(#\w+)\s+Bulto:(\d+)\s+Peso\s*\(Kg\):([\d\.]+)\s+M3:([\d\.]+)', l)
+            if b_m:
+                tag = b_m.group(1)
+                b_loc = int(b_m.group(2))
+                key = (tag, b_loc)
+                if key not in bulto_dict:
+                    bulto_seq += 1
+                    bulto_dict[key] = {
+                        'nb': bulto_seq,
+                        'peso': parse_decimal_safe(b_m.group(3)),
+                        'cbm': parse_decimal_safe(b_m.group(4)),
+                        'items': []
+                    }
+                current_bulto_key = key
+                i += 1
+                continue
+
+            if any(l.startswith(k) for k in ['Página', 'AJ INTERNATIONAL', 'R.U.C.', 'Dirección:', 'Télefonos:', 'LISTA DE EMPAQUE', 'Cliente:', 'Teléfono:', 'Observación:', 'Código Referencia', 'Peso Bultos', 'Bultos Totales']):
+                i += 1
+                continue
+
+            it_m = re.search(r'^([A-Z0-9\-]+)\s+(\S+)\s+(.*?)\s+(\d+\.\d{2})$', l)
+            if it_m and current_bulto_key:
+                code = it_m.group(1)
+                ref = it_m.group(2)
+                rest = it_m.group(3)
+                qty = parse_decimal_safe(it_m.group(4))
+
+                marca = ""
+                desc = rest
+                for b_cand in sorted(KNOWN_BRANDS, key=len, reverse=True):
+                    if rest.startswith(b_cand):
+                        marca = b_cand
+                        desc = rest[len(b_cand):].strip()
+                        break
+                if not marca:
+                    tokens = rest.split()
+                    marca = tokens[0] if tokens else "AJ"
+                    desc = " ".join(tokens[1:])
+
+                bulto_dict[current_bulto_key]['items'].append({
+                    'code': code,
+                    'ref': ref,
+                    'desc': desc,
+                    'marca': marca,
+                    'qty': qty
+                })
+                i += 1
+                continue
+
+            i += 1
+
+    raw_items = []
+    for (tag, loc), bdata in sorted(bulto_dict.items(), key=lambda x: x[1]['nb']):
+        nb = bdata['nb']
+        b_p = bdata['peso']
+        b_c = bdata['cbm']
+        items = bdata['items']
+        tot_q = sum(it['qty'] for it in items)
+        if tot_q == 0:
+            tot_q = Decimal(1)
+
+        accum_p = Decimal(0)
+        accum_c = Decimal(0)
+        n_it = len(items)
+
+        for idx, it in enumerate(items):
+            if idx == n_it - 1:
+                p = b_p - accum_p
+                c = b_c - accum_c
+            else:
+                p = (b_p * (it['qty'] / tot_q)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                c = (b_c * (it['qty'] / tot_q)).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                accum_p += p
+                accum_c += c
+
+            detalle = clean_detail(it['desc'])
+            raw_items.append({
+                'nb': nb,
+                'code': it['code'],
+                'detalle': detalle,
+                'uni': 'PZA',
+                'marca': it['marca'],
+                'qty': it['qty'],
+                'peso': p,
+                'cbm': c
+            })
+
+    if hdr_peso > 0 and raw_items:
+        sum_p = sum(it['peso'] for it in raw_items)
+        sum_c = sum(it['cbm'] for it in raw_items)
+        raw_items[-1]['peso'] += (hdr_peso - sum_p)
+        raw_items[-1]['cbm'] += (hdr_cbm - sum_c)
+
+    return [{
+        'proveedor': proveedor,
+        'n_fact': n_fact,
+        'cliente': cliente,
+        'items': raw_items
+    }]
+
 def parse_pdf(pdf_path):
     """Detecta automáticamente el proveedor del PDF y ejecuta el parser correspondiente."""
     prov = detect_provider(pdf_path)
     if prov == "STAR_AUTO_PARTS":
         return parse_star_auto_parts(pdf_path)
+    elif prov == "AJ_INTERNATIONAL":
+        return parse_aj_international(pdf_path)
     elif prov == "JAPAN_INTERNATIONAL":
         return parse_japan_international(pdf_path)
     else:
@@ -1089,256 +1259,191 @@ def parse_adk_excel(excel_path, wb=None):
         'items': raw_items
     }]
 
-def parse_nikomoto_xlsx(excel_path, wb=None):
-    """Extrae facturas y repuestos desde archivos Excel .xlsx de NIKOMOTO, S.A."""
-    if wb is None:
+def parse_nikomoto(excel_path):
+    """
+    Extrae facturas y repuestos desde archivos Excel (.xls y .xlsx) de NIKOMOTO, S.A.
+    Soporta rangos de bultos (ej. '14 Al 63'), pesos por bulto y pesos por fila,
+    y extrae con precisión número de factura y cliente.
+    """
+    ext = os.path.splitext(excel_path)[1].lower()
+    if ext == '.xls':
+        import xlrd
+        wb = xlrd.open_workbook(excel_path)
+        sh = wb.sheet_by_index(0)
+        nrows, ncols = sh.nrows, sh.ncols
+        get_val = lambda r, c: sh.cell_value(r, c)
+    else:
         wb = openpyxl.load_workbook(excel_path, data_only=True)
-    ws = wb.active
+        sh = wb.active
+        nrows, ncols = sh.max_row, sh.max_column
+        get_val = lambda r, c: sh.cell(r + 1, c + 1).value or ''
 
     proveedor = 'NIKOMOTO, S.A.'
     n_fact = ''
     cliente = ''
 
-    for r in range(1, min(15, ws.max_row + 1)):
-        for c in range(1, min(20, ws.max_column + 1)):
-            v = str(ws.cell(r, c).value or '').strip()
-            if v.lower() == 'nombe':
-                for c2 in range(c + 1, min(c + 15, ws.max_column + 1)):
-                    v2 = ws.cell(r, c2).value
-                    if v2:
-                        cliente = str(v2).strip()
-                        break
-            elif v == 'Lista de Empaque':
-                for c2 in range(1, c):
-                    v2 = ws.cell(r, c2).value
-                    if v2:
-                        n_fact = str(v2).strip()
-                        break
-
-    if not n_fact:
-        n_fact = str(ws.cell(8, 4).value or '').strip()
-    if not n_fact:
-        m = re.search(r'(\d+)', os.path.basename(excel_path))
-        if m:
-            n_fact = m.group(1)
-
-    tot_p_hdr = Decimal(0)
-    tot_c_hdr = Decimal(0)
-    for r in range(ws.max_row, max(1, ws.max_row - 15), -1):
-        for c in range(1, 5):
-            if 'total de bultos' in str(ws.cell(r, c).value or '').lower():
-                tot_p_hdr = parse_decimal_safe(ws.cell(r, 34).value)
-                tot_c_hdr = parse_decimal_safe(ws.cell(r, 38).value)
-                break
-
-    bultos = {}
-    cur_b_key = '1'
-    cur_b_list = [1]
-    cur_b_p = Decimal(0)
-    cur_b_c = Decimal(0)
-
-    for r in range(14, ws.max_row + 1):
-        if 'total de bultos' in str(ws.cell(r, 2).value or '').lower():
-            break
-        if ws.cell(r, 16).value == 'Bulto':
-            b_start = int(ws.cell(r, 17).value or 1)
-            if str(ws.cell(r, 19).value or '').strip().lower() == 'al':
-                b_end = int(ws.cell(r, 21).value or b_start)
-            else:
-                b_end = b_start
-            cur_b_list = list(range(b_start, b_end + 1))
-            cur_b_p = parse_decimal_safe(ws.cell(r, 34).value)
-            cur_b_c = parse_decimal_safe(ws.cell(r, 38).value)
-            cur_b_key = f"{b_start}-{b_end}"
-            bultos[cur_b_key] = {
-                'b_list': cur_b_list,
-                'peso': cur_b_p,
-                'cbm': cur_b_c,
-                'items': []
-            }
-            continue
-
-        c1 = ws.cell(r, 1).value
-        c4 = ws.cell(r, 4).value
-        if c1 is not None and isinstance(c1, (int, float)) and c4:
-            code = str(c4).strip()
-            marca = str(ws.cell(r, 15).value or '').strip()
-            desc = str(ws.cell(r, 19).value or '').strip()
-            qty = parse_decimal_safe(ws.cell(r, 30).value)
-            if cur_b_key not in bultos:
-                bultos[cur_b_key] = {'b_list': [1], 'peso': Decimal(0), 'cbm': Decimal(0), 'items': []}
-            bultos[cur_b_key]['items'].append({
-                'code': code,
-                'marca': marca,
-                'desc': desc,
-                'qty': qty
-            })
-
-    raw_items = []
-    for b_key, b_data in bultos.items():
-        b_list = b_data['b_list']
-        b_items = b_data['items']
-        n_b = len(b_list)
-        b_p = b_data['peso']
-        b_c = b_data['cbm']
-        tot_q = sum(it['qty'] for it in b_items)
-        if tot_q == 0:
-            tot_q = Decimal(1)
-
-        for it in b_items:
-            q_per = it['qty'] / n_b
-            it_p_tot = b_p * (it['qty'] / tot_q)
-            it_c_tot = b_c * (it['qty'] / tot_q)
-            p_per = (it_p_tot / n_b).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            c_per = (it_c_tot / n_b).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
-            p_diff = it_p_tot - (p_per * n_b)
-            c_diff = it_c_tot - (c_per * n_b)
-
-            detalle = clean_detail(it['desc'])
-            for b_idx, b_num in enumerate(b_list):
-                raw_items.append({
-                    'nb': b_num,
-                    'code': it['code'],
-                    'detalle': detalle,
-                    'uni': 'PZA',
-                    'marca': it['marca'],
-                    'qty': q_per,
-                    'peso': p_per + (p_diff if b_idx == n_b - 1 else Decimal(0)),
-                    'cbm': c_per + (c_diff if b_idx == n_b - 1 else Decimal(0))
-                })
-
-    if tot_p_hdr > 0 and raw_items:
-        sum_p = sum(it['peso'] for it in raw_items)
-        sum_c = sum(it['cbm'] for it in raw_items)
-        diff_p = tot_p_hdr - sum_p
-        diff_c = tot_c_hdr - sum_c
-        raw_items[-1]['peso'] += diff_p
-        raw_items[-1]['cbm'] += diff_c
-
-    return [{
-        'proveedor': proveedor,
-        'n_fact': n_fact,
-        'cliente': cliente,
-        'items': raw_items
-    }]
-
-def parse_excel_xls(excel_path):
-    """Extrae facturas y repuestos desde archivos Excel binarios .xls (utilizando xlrd)."""
-    import xlrd
-
-    wb = xlrd.open_workbook(excel_path)
-    sh = wb.sheet_by_index(0)
-
-    proveedor = 'NIKOMOTO, S.A.'
-    n_fact = ''
-    cliente = ''
-
-    for r in range(min(15, sh.nrows)):
-        for c in range(min(20, sh.ncols)):
-            v = str(sh.cell_value(r, c)).strip()
-            if v.lower() == 'nombe':
-                for c2 in range(c + 1, min(c + 15, sh.ncols)):
-                    v2 = sh.cell_value(r, c2)
+    # Extracción de cabecera (Factura y Cliente)
+    for r in range(min(15, nrows)):
+        for c in range(ncols):
+            v = str(get_val(r, c)).strip()
+            if v.lower() in ['nombe', 'nombre']:
+                for c2 in range(c + 1, min(c + 15, ncols)):
+                    v2 = get_val(r, c2)
                     if v2:
                         cliente = str(v2).strip()
                         break
             elif v == 'Lista de Empaque':
                 for c2 in range(0, c):
-                    v2 = sh.cell_value(r, c2)
+                    v2 = get_val(r, c2)
                     if v2:
-                        n_fact = str(v2).strip()
+                        val_str = str(v2).strip()
+                        if val_str.endswith('.0'):
+                            val_str = val_str[:-2]
+                        n_fact = val_str
                         break
 
-    if not n_fact:
-        m = re.search(r'([A-Za-z0-9\-]+)', os.path.basename(excel_path))
+    if not n_fact or n_fact == 'REPUESTOS':
+        m = re.search(r'00\d{5}-E|\d{5}', os.path.basename(excel_path))
         if m:
-            n_fact = m.group(1)
+            n_fact = m.group(0)
+        elif not n_fact:
+            n_fact = "S/F"
 
+    if not cliente:
+        base = os.path.basename(excel_path)
+        m = re.search(r'^(.*?)\s*-\s*NIKOMOTO', base, re.IGNORECASE)
+        if m:
+            cliente = m.group(1).strip()
+
+    # Totales de la cabecera / pie de página
     tot_p_hdr = Decimal(0)
     tot_c_hdr = Decimal(0)
-    for r in range(sh.nrows - 1, max(0, sh.nrows - 15), -1):
-        for c in range(min(5, sh.ncols)):
-            if 'total de bultos' in str(sh.cell_value(r, c)).lower():
-                tot_p_hdr = parse_decimal_safe(sh.cell_value(r, 33))
-                tot_c_hdr = parse_decimal_safe(sh.cell_value(r, 37))
+    tot_q_hdr = Decimal(0)
+    tot_b_hdr = Decimal(0)
+
+    for r in range(nrows - 1, max(-1, nrows - 25), -1):
+        for c in range(ncols):
+            if 'total de bultos' in str(get_val(r, c)).lower():
+                vals = [parse_decimal_safe(get_val(r, c2)) for c2 in range(ncols) if parse_decimal_safe(get_val(r, c2)) > 0]
+                if len(vals) >= 4:
+                    tot_b_hdr = vals[0]
+                    tot_q_hdr = vals[1]
+                    tot_p_hdr = vals[2]
+                    tot_c_hdr = vals[3]
+                break
+        if tot_q_hdr > 0:
+            break
+
+    # Detección dinámica de bultos y lectura de repuestos
+    raw_bultos = []
+    cur_b_start = 1
+    cur_b_end = 1
+    cur_hdr_p = Decimal(0)
+    cur_hdr_c = Decimal(0)
+    cur_items = []
+    in_items = False
+
+    for r in range(nrows):
+        if 'total de bultos' in str(get_val(r, 1)).lower():
+            break
+
+        is_bulto_row = False
+        for c in range(ncols):
+            if str(get_val(r, c)).strip().upper() == 'BULTO':
+                is_bulto_row = True
+                if cur_items:
+                    raw_bultos.append((cur_b_start, cur_b_end, cur_hdr_p, cur_hdr_c, cur_items))
+                    cur_items = []
+
+                nums = []
+                for c2 in range(c + 1, min(c + 10, ncols)):
+                    val = str(get_val(r, c2)).strip()
+                    if val and val.upper() != 'AL':
+                        try:
+                            nums.append(int(float(val)))
+                        except:
+                            pass
+                if len(nums) == 1:
+                    cur_b_start = nums[0]
+                    cur_b_end = nums[0]
+                elif len(nums) >= 2:
+                    cur_b_start = nums[0]
+                    cur_b_end = nums[1]
+                else:
+                    cur_b_start += 1
+                    cur_b_end = cur_b_start
+
+                cur_hdr_p = parse_decimal_safe(get_val(r, 33))
+                cur_hdr_c = parse_decimal_safe(get_val(r, 37))
+                in_items = True
                 break
 
-    bultos = {}
-    cur_b_key = '1'
-    cur_b_list = [1]
-    cur_b_p = Decimal(0)
-    cur_b_c = Decimal(0)
-
-    for r in range(14, sh.nrows):
-        if 'total de bultos' in str(sh.cell_value(r, 1)).lower():
-            break
-        if str(sh.cell_value(r, 15)).strip().lower() == 'bulto':
-            b_start = int(float(sh.cell_value(r, 16) or 1))
-            if str(sh.cell_value(r, 17)).strip().lower() == 'al':
-                b_end = int(float(sh.cell_value(r, 18) or b_start))
-            else:
-                b_end = b_start
-            cur_b_list = list(range(b_start, b_end + 1))
-            cur_b_p = parse_decimal_safe(sh.cell_value(r, 33))
-            cur_b_c = parse_decimal_safe(sh.cell_value(r, 37))
-            cur_b_key = f"{b_start}-{b_end}"
-            bultos[cur_b_key] = {
-                'b_list': cur_b_list,
-                'peso': cur_b_p,
-                'cbm': cur_b_c,
-                'items': []
-            }
+        if is_bulto_row:
             continue
 
-        c0 = sh.cell_value(r, 0)
-        c3 = sh.cell_value(r, 3)
-        if c0 != '' and isinstance(c0, (int, float)) and c3:
-            code = str(c3).strip()
-            marca = str(sh.cell_value(r, 14) or '').strip()
-            desc = str(sh.cell_value(r, 18) or '').strip()
-            qty = parse_decimal_safe(sh.cell_value(r, 29))
-            if cur_b_key not in bultos:
-                bultos[cur_b_key] = {'b_list': [1], 'peso': Decimal(0), 'cbm': Decimal(0), 'items': []}
-            bultos[cur_b_key]['items'].append({
+        if not in_items:
+            continue
+
+        code = str(get_val(r, 3)).strip()
+        desc = str(get_val(r, 18)).strip()
+        qty = parse_decimal_safe(get_val(r, 29))
+        p_row = parse_decimal_safe(get_val(r, 33))
+        c_row = parse_decimal_safe(get_val(r, 37))
+        marca = str(get_val(r, 14)).strip()
+
+        if code and desc and qty > 0 and 'PRODUCTO' not in code.upper() and 'TOTAL' not in code.upper():
+            cur_items.append({
                 'code': code,
-                'marca': marca,
                 'desc': desc,
-                'qty': qty
+                'uni': 'PZA',
+                'marca': marca or 'NIKOMOTO',
+                'qty': qty,
+                'peso_row': p_row,
+                'cbm_row': c_row
             })
 
+    if cur_items:
+        raw_bultos.append((cur_b_start, cur_b_end, cur_hdr_p, cur_hdr_c, cur_items))
+
+    # Expansión de bultos y distribución exacta de pesos y volúmenes (Regla 3)
     raw_items = []
-    for b_key, b_data in bultos.items():
-        b_list = b_data['b_list']
-        b_items = b_data['items']
+    for b_start, b_end, hdr_p, hdr_c, items in raw_bultos:
+        sum_row_p = sum(it['peso_row'] for it in items)
+        sum_row_c = sum(it['cbm_row'] for it in items)
+        b_p = hdr_p if hdr_p > 0 else sum_row_p
+        b_c = hdr_c if hdr_c > 0 else sum_row_c
+
+        b_list = list(range(b_start, b_end + 1))
         n_b = len(b_list)
-        b_p = b_data['peso']
-        b_c = b_data['cbm']
-        tot_q = sum(it['qty'] for it in b_items)
+        tot_q = sum(it['qty'] for it in items)
         if tot_q == 0:
             tot_q = Decimal(1)
 
-        for it in b_items:
-            q_per = it['qty'] / n_b
+        for it in items:
+            detalle = clean_detail(it['desc'])
+            q_per = (it['qty'] / Decimal(n_b)).quantize(Decimal('1'), rounding=ROUND_HALF_UP) if it['qty'] % Decimal(n_b) == 0 else (it['qty'] / Decimal(n_b))
+            q_diff = it['qty'] - (q_per * Decimal(n_b))
+
             it_p_tot = b_p * (it['qty'] / tot_q)
             it_c_tot = b_c * (it['qty'] / tot_q)
-            p_per = (it_p_tot / n_b).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            c_per = (it_c_tot / n_b).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
-            p_diff = it_p_tot - (p_per * n_b)
-            c_diff = it_c_tot - (c_per * n_b)
+            p_per = (it_p_tot / Decimal(n_b)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            c_per = (it_c_tot / Decimal(n_b)).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+            p_diff = it_p_tot - (p_per * Decimal(n_b))
+            c_diff = it_c_tot - (c_per * Decimal(n_b))
 
-            detalle = clean_detail(it['desc'])
             for b_idx, b_num in enumerate(b_list):
                 raw_items.append({
                     'nb': b_num,
                     'code': it['code'],
                     'detalle': detalle,
-                    'uni': 'PZA',
+                    'uni': it['uni'],
                     'marca': it['marca'],
-                    'qty': q_per,
+                    'qty': q_per + (q_diff if b_idx == n_b - 1 else Decimal(0)),
                     'peso': p_per + (p_diff if b_idx == n_b - 1 else Decimal(0)),
                     'cbm': c_per + (c_diff if b_idx == n_b - 1 else Decimal(0))
                 })
 
+    # Cuadre final con totales de cabecera si están presentes
     if tot_p_hdr > 0 and raw_items:
         sum_p = sum(it['peso'] for it in raw_items)
         sum_c = sum(it['cbm'] for it in raw_items)
@@ -1353,6 +1458,14 @@ def parse_excel_xls(excel_path):
         'cliente': cliente,
         'items': raw_items
     }]
+
+def parse_nikomoto_xlsx(excel_path, wb=None):
+    """Compatibilidad: Llama al parser unificado de NIKOMOTO."""
+    return parse_nikomoto(excel_path)
+
+def parse_excel_xls(excel_path):
+    """Compatibilidad: Llama al parser unificado de NIKOMOTO."""
+    return parse_nikomoto(excel_path)
 
 def parse_standard_excel(excel_path, wb=None):
     """Extrae las facturas y repuestos desde el formato estándar de Excel."""
@@ -1445,10 +1558,145 @@ def parse_excel(excel_path):
 
     if "ADK CORPORATION" in header_text or "COCO SOLITO" in header_text or "CLAVE 8752" in header_text:
         return parse_adk_excel(excel_path, wb=wb)
-    elif "NIKOMOTO" in header_text or "NIKOMOTOZL.COM" in header_text:
-        return parse_nikomoto_xlsx(excel_path, wb=wb)
+    elif "NIKOMOTO" in header_text or "NIKOMOTOZL.COM" in header_text or "TAIHO" in header_text:
+        return parse_nikomoto(excel_path)
     else:
         return parse_standard_excel(excel_path, wb=wb)
+
+def parse_aisin_docx(file_path):
+    """
+    Extrae facturas y repuestos desde archivos Word (.docx) de AISIN SALES LATIN AMERICA, S.A.
+    Maneja bloques de bultos '( BULTOS#: 1/ 1 ---> 16.00 Kilos )', ítems y líneas MARCA->.
+    Aplica la Regla 3 para división equitativa de bultos múltiples.
+    """
+    import docx
+
+    doc = docx.Document(file_path)
+    paras = [p.text for p in doc.paragraphs if p.text.strip()]
+    full_text = "\n".join(paras)
+
+    proveedor = "AISIN SALES LATIN AMERICA, S.A."
+    cliente = ""
+    n_fact = ""
+
+    senores_m = re.search(r'SENORES\s*:\s*([^\n\r]+)', full_text)
+    if senores_m:
+        raw_senores = senores_m.group(1).strip()
+        m_num = re.search(r'\s+(\d{3,6})$', raw_senores)
+        if m_num:
+            n_fact = m_num.group(1)
+            cliente = raw_senores[:m_num.start()].strip()
+        else:
+            cliente = raw_senores
+
+    if not n_fact:
+        m = re.search(r'(\d{4,})', os.path.basename(file_path))
+        if m:
+            n_fact = m.group(1)
+        else:
+            n_fact = "S/F"
+
+    tot_p_m = re.search(r'TOTAL PIEZAS:\s*([\d,\.]+)', full_text)
+    tot_w_m = re.search(r'TOTAL PESO\.\.:\s*([\d,\.]+)', full_text)
+    tot_b_m = re.search(r'TOTAL BULTOS:\s*([\d,\.]+)', full_text)
+
+    hdr_cant = parse_decimal_safe(tot_p_m.group(1)) if tot_p_m else Decimal(0)
+    hdr_peso = parse_decimal_safe(tot_w_m.group(1)) if tot_w_m else Decimal(0)
+    hdr_bultos = int(parse_decimal_safe(tot_b_m.group(1))) if tot_b_m else 0
+
+    raw_bultos = []
+    cur_b_start = 1
+    cur_b_end = 1
+    cur_b_peso = Decimal(0)
+    cur_items = []
+
+    i = 0
+    while i < len(paras):
+        p = paras[i]
+        b_box_m = re.search(r'\(\s*BULTOS#:\s*(\d+)/\s*(\d+)\s*--->\s*([\d,\.]+)\s*Kilos\s*\)', p)
+        if b_box_m:
+            if cur_items:
+                raw_bultos.append((cur_b_start, cur_b_end, cur_b_peso, cur_items))
+                cur_items = []
+            cur_b_start = int(b_box_m.group(1))
+            cur_b_end = int(b_box_m.group(2))
+            cur_b_peso = parse_decimal_safe(b_box_m.group(3))
+            i += 1
+            continue
+
+        it_m = re.search(r'^\s*(\d+)/\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*?)\s+([\d,\.]+)\s+([A-Z]{2})\s*$', p)
+        if it_m:
+            code = it_m.group(4)
+            middle = it_m.group(5).strip()
+            qty = parse_decimal_safe(it_m.group(6))
+            uni = it_m.group(7)
+
+            marca = "AISIN"
+            if i + 1 < len(paras):
+                m_marca = re.search(r'MARCA->\s*([^/\n\r]+)', paras[i+1])
+                if m_marca:
+                    marca = m_marca.group(1).strip()
+
+            parts = re.split(r'\s{2,}', middle, maxsplit=1)
+            raw_desc = parts[1] if len(parts) == 2 else parts[0]
+
+            detalle = clean_detail(raw_desc)
+            cur_items.append({
+                'code': code,
+                'detalle': detalle,
+                'uni': 'PZA' if uni in ['PZ', 'UND', 'UN'] else uni,
+                'marca': marca,
+                'qty': qty
+            })
+
+        i += 1
+
+    if cur_items:
+        raw_bultos.append((cur_b_start, cur_b_end, cur_b_peso, cur_items))
+
+    raw_items = []
+    for b_start, b_end, b_peso, items in raw_bultos:
+        b_list = list(range(b_start, b_end + 1))
+        n_b = len(b_list)
+        tot_q = sum(it['qty'] for it in items)
+        if tot_q == 0:
+            tot_q = Decimal(1)
+
+        for it in items:
+            q_per = (it['qty'] / Decimal(n_b)).quantize(Decimal('1'), rounding=ROUND_HALF_UP) if it['qty'] % Decimal(n_b) == 0 else (it['qty'] / Decimal(n_b))
+            q_diff = it['qty'] - (q_per * Decimal(n_b))
+
+            it_p_tot = b_peso * (it['qty'] / tot_q)
+            p_per = (it_p_tot / Decimal(n_b)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            p_diff = it_p_tot - (p_per * Decimal(n_b))
+
+            for b_idx, b_num in enumerate(b_list):
+                raw_items.append({
+                    'nb': b_num,
+                    'code': it['code'],
+                    'detalle': it['detalle'],
+                    'uni': it['uni'],
+                    'marca': it['marca'],
+                    'qty': q_per + (q_diff if b_idx == n_b - 1 else Decimal(0)),
+                    'peso': p_per + (p_diff if b_idx == n_b - 1 else Decimal(0)),
+                    'cbm': Decimal(0)
+                })
+
+    if hdr_peso > 0 and raw_items:
+        sum_p = sum(it['peso'] for it in raw_items)
+        diff_p = hdr_peso - sum_p
+        raw_items[-1]['peso'] += diff_p
+
+    return [{
+        'proveedor': proveedor,
+        'n_fact': n_fact,
+        'cliente': cliente,
+        'items': raw_items
+    }]
+
+def parse_docx(docx_path):
+    """Detecta el proveedor del documento Word .docx y ejecuta el parser correspondiente."""
+    return parse_aisin_docx(docx_path)
 
 def group_invoice_items(items):
     """Agrupa por (NB, DETALLE, MARCA) y conserva el primer código."""
@@ -1665,8 +1913,10 @@ def process_file(file_path):
         invoices = parse_pdf(file_path)
     elif ext in ['.xlsx', '.xls']:
         invoices = parse_excel(file_path)
+    elif ext == '.docx':
+        invoices = parse_docx(file_path)
     else:
-        print(f"Error: Formato no soportado ({ext}). Debe ser PDF o Excel (.xlsx/.xls).", file=sys.stderr)
+        print(f"Error: Formato no soportado ({ext}). Debe ser PDF, Word (.docx) o Excel (.xlsx/.xls).", file=sys.stderr)
         return None
 
     results = []
@@ -1679,15 +1929,15 @@ def process_file(file_path):
 
 def process_folder(input_dir, output_dir):
     """
-    Procesa todos los archivos PDF y Excel en la carpeta de Entrada,
+    Procesa todos los archivos PDF, Word y Excel en la carpeta de Entrada,
     genera los archivos Markdown individuales y crea el CONSOLIDADO_FACTURAS.xlsx con todos.
     """
     os.makedirs(output_dir, exist_ok=True)
-    supported_exts = ('.pdf', '.xlsx', '.xls')
+    supported_exts = ('.pdf', '.xlsx', '.xls', '.docx')
     files = [f for f in os.listdir(input_dir) if f.lower().endswith(supported_exts) and not f.startswith("~$")]
 
     if not files:
-        print(f"No se encontraron archivos PDF o Excel en: {input_dir}")
+        print(f"No se encontraron archivos PDF, Word o Excel en: {input_dir}")
         return
 
     print(f"Encontrados {len(files)} archivos para procesar en: {input_dir}\n")
@@ -1703,6 +1953,8 @@ def process_folder(input_dir, output_dir):
             ext = os.path.splitext(f)[1].lower()
             if ext == '.pdf':
                 invs = parse_pdf(in_path)
+            elif ext == '.docx':
+                invs = parse_docx(in_path)
             else:
                 invs = parse_excel(in_path)
 
@@ -1746,8 +1998,10 @@ if __name__ == "__main__":
             invs = parse_pdf(target_file)
         elif ext in ['.xlsx', '.xls']:
             invs = parse_excel(target_file)
+        elif ext == '.docx':
+            invs = parse_docx(target_file)
         else:
-            print(f"Error: Formato no soportado ({ext}). Debe ser PDF o Excel.", file=sys.stderr)
+            print(f"Error: Formato no soportado ({ext}). Debe ser PDF, Word (.docx) o Excel.", file=sys.stderr)
             sys.exit(1)
 
         if invs:

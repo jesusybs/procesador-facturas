@@ -21,6 +21,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from procesador_facturas import (
     parse_pdf,
     parse_excel,
+    parse_docx,
     group_invoice_items,
     export_invoices_to_excel,
     format_number_es,
@@ -50,9 +51,17 @@ def index():
 @app.route('/api/version')
 def get_version():
     return jsonify({
-        'version': '2.3.0',
-        'build': 'batch-safe',
-        'providers': ['PERFECT TRADING', 'STAR AUTO PARTS, S.A.', 'JAPAN INTERNATIONAL', 'ADK CORPORATION', 'NIKOMOTO, S.A.'],
+        'version': '2.4.0',
+        'build': 'batch-safe-docx',
+        'providers': [
+            'PERFECT TRADING',
+            'STAR AUTO PARTS, S.A.',
+            'JAPAN INTERNATIONAL',
+            'ADK CORPORATION',
+            'NIKOMOTO, S.A.',
+            'AISIN SALES LATIN AMERICA, S.A.',
+            'AJ INTERNATIONAL GROUP, S.A.'
+        ],
         'status': 'online'
     })
 
@@ -127,7 +136,7 @@ def process_files():
             continue
 
         ext = os.path.splitext(filename)[1].lower()
-        if ext not in ['.pdf', '.xlsx', '.xls']:
+        if ext not in ['.pdf', '.xlsx', '.xls', '.docx']:
             continue
 
         saved_path = os.path.join(UPLOAD_FOLDER, filename)
@@ -136,6 +145,8 @@ def process_files():
         try:
             if ext == '.pdf':
                 invs = parse_pdf(saved_path)
+            elif ext == '.docx':
+                invs = parse_docx(saved_path)
             else:
                 invs = parse_excel(saved_path)
             
