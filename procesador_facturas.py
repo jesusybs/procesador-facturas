@@ -1699,26 +1699,44 @@ def parse_docx(docx_path):
     return parse_aisin_docx(docx_path)
 
 def group_invoice_items(items):
-    """Agrupa por (NB, DETALLE, MARCA) y conserva el primer código."""
+    """
+    Agrupa repuestos dentro del mismo bulto por su tipo de repuesto (NB, DETALLE),
+    sin importar que pertenezcan a distintos fabricantes/marcas.
+
+    Reglas:
+    1. Si el repuesto es el mismo en el mismo bulto, se unen en una sola fila.
+    2. Se toma el código del repuesto que tenga la mayor cantidad.
+    3. Se conserva la descripción (y marca) del repuesto con mayor cantidad.
+    4. Las cantidades, pesos y CBM se suman con cuadre exacto.
+    """
     groups = {}
     for it in items:
-        key = (it['nb'], it['detalle'], it['marca'])
+        key = (it['nb'], it['detalle'])
         if key not in groups:
-            groups[key] = {
-                'nb': it['nb'],
-                'code': it['code'],
-                'detalle': it['detalle'],
-                'uni': it['uni'],
-                'marca': it['marca'],
-                'qty': Decimal(0),
-                'peso': Decimal(0),
-                'cbm': Decimal(0)
-            }
-        groups[key]['qty'] += it['qty']
-        groups[key]['peso'] += it['peso']
-        groups[key]['cbm'] += it['cbm']
+            groups[key] = []
+        groups[key].append(it)
 
-    return sorted(groups.values(), key=lambda x: (x['nb'], x['detalle'], x['marca']))
+    result = []
+    for (nb, detalle), group_items in groups.items():
+        # Ítem dominante con mayor cantidad (si hay empate en cantidad, prefiere con código o más específico)
+        dominant = max(group_items, key=lambda x: (x['qty'], 1 if x.get('code') else 0, len(str(x.get('detalle', '')))))
+
+        tot_qty = sum((it['qty'] for it in group_items), Decimal(0))
+        tot_peso = sum((it['peso'] for it in group_items), Decimal(0))
+        tot_cbm = sum((it['cbm'] for it in group_items), Decimal(0))
+
+        result.append({
+            'nb': nb,
+            'code': dominant['code'],
+            'detalle': dominant['detalle'],
+            'uni': dominant['uni'],
+            'marca': dominant['marca'],
+            'qty': tot_qty,
+            'peso': tot_peso,
+            'cbm': tot_cbm
+        })
+
+    return sorted(result, key=lambda x: (x['nb'], x['detalle']))
 
 def process_and_generate_markdown(invoice_data):
     """
