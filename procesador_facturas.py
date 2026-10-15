@@ -367,30 +367,49 @@ def clean_detail(desc):
 def parse_decimal_safe(val):
     if val is None or val == "":
         return Decimal(0)
-    val_str = str(val).replace(",", ".").strip()
-    try:
-        return Decimal(val_str)
-    except:
+    s = str(val).strip().replace(" ", "").replace("\n", "")
+    s = re.sub(r'[^\d.,\-+]', '', s)
+    if not s:
         return Decimal(0)
+
+    if "," in s and "." in s:
+        last_comma = s.rfind(",")
+        last_dot = s.rfind(".")
+        if last_comma < last_dot:
+            s = s.replace(",", "")
+        else:
+            s = s.replace(".", "").replace(",", ".")
+    elif "," in s:
+        s = s.replace(",", ".")
+
+    try:
+        return Decimal(s)
+    except Exception:
+        m = re.search(r'[-+]?\d*\.?\d+', s)
+        return Decimal(m.group()) if m else Decimal(0)
 
 def detect_provider(pdf_path):
     """
     Detecta automáticamente el proveedor del documento PDF:
+    - PARQUE DEL MAR 37D, S.A.
+    - PERFECT TRADING
     - STAR AUTO PARTS, S.A.
     - JAPAN INTERNATIONAL (Pedidos WO- / WO_LY-)
-    - PERFECT TRADING
+    - AJ INTERNATIONAL
     """
     try:
         import pypdf
         reader = pypdf.PdfReader(pdf_path)
         if reader.pages:
             p0 = (reader.pages[0].extract_text() or "").upper()
-            if "STAR AUTO PARTS" in p0 or "1158018-1-573227" in p0 or ("ZONA LIBRE DE COL" in p0 and "STAR" in p0):
+            if "PARQUE DEL MAR" in p0 or "WH/OUT/" in p0 or "2646657-1-840205" in p0:
+                return "PARQUE_DEL_MAR"
+            if "PERFECT TRADING" in p0 or "COLON/OUT/" in p0:
+                return "PERFECT_TRADING"
+            if "STAR AUTO PARTS" in p0 or "1158018-1-573227" in p0 or ("ZONA LIBRE DE COL" in p0 and "STAR AUTO" in p0):
                 return "STAR_AUTO_PARTS"
             if "JAPAN INTERNATIONAL" in p0 or "WO-" in p0 or "WO_LY-" in p0 or ("PEDIDO:" in p0 and "COTIZAC" in p0) or "ENX00" in p0:
                 return "JAPAN_INTERNATIONAL"
-            if "PERFECT TRADING" in p0 or "COLON/OUT/" in p0:
-                return "PERFECT_TRADING"
     except Exception:
         pass
 
@@ -399,7 +418,11 @@ def detect_provider(pdf_path):
         with pdfplumber.open(pdf_path) as pdf:
             if pdf.pages:
                 p0 = (pdf.pages[0].extract_text() or "").upper()
-                if "STAR AUTO PARTS" in p0 or "1158018-1-573227" in p0:
+                if "PARQUE DEL MAR" in p0 or "WH/OUT/" in p0 or "2646657-1-840205" in p0:
+                    return "PARQUE_DEL_MAR"
+                if "PERFECT TRADING" in p0 or "COLON/OUT/" in p0:
+                    return "PERFECT_TRADING"
+                if "STAR AUTO PARTS" in p0 or "1158018-1-573227" in p0 or ("ZONA LIBRE DE COL" in p0 and "STAR AUTO" in p0):
                     return "STAR_AUTO_PARTS"
                 if "AJ INTERNATIONAL" in p0:
                     return "AJ_INTERNATIONAL"
@@ -597,100 +620,382 @@ def parse_star_auto_parts(pdf_path):
         'items': raw_items
     }]
 
-def parse_perfect_trading(pdf_path):
-    """Extrae las facturas y repuestos desde un archivo PDF de PERFECT TRADING usando pdfplumber."""
-    import pdfplumber
+KNOWN_BRANDS_PDM = [
+    "AISIN", "GMB", "KOYO", "DENSO", "SEIWA", "NPW", "TOKICO", "SAFETY",
+    "MASAKI", "TAKASHI", "PERFECT", "NATSUKI", "KAZE", "CLIPSE", "IRIDIUM",
+    "NECCO", "DIAMOND", "GENUINE/SUZUKI", "EXACT CARS", "K.M.C."
+]
 
-    with pdfplumber.open(pdf_path) as pdf:
-        full_text = "\n".join([page.extract_text() or "" for page in pdf.pages])
-        lines = [l.strip() for l in full_text.split("\n") if l.strip()]
+def dedup_words(s):
+    if not s or not isinstance(s, str):
+        return s
+    words = s.split(" ")
+    out = []
+    for w in words:
+        if len(w) >= 2 and len(w) % 2 == 0 and all(w[i] == w[i+1] for i in range(0, len(w), 2)):
+            out.append(w[::2])
+        else:
+            out.append(w)
+    res = " ".join(out)
+    if '[[' in res and ']]' in res:
+        def fix_b(m):
+            inner = m.group(1)
+            if len(inner) % 2 == 0 and all(inner[i] == inner[i+1] for i in range(0, len(inner), 2)):
+                return '[' + inner[::2] + ']'
+            return '[' + inner + ']'
+        res = re.sub(r'\[\[(.*?)\]\]', fix_b, res)
+    return res
 
-        proveedor = "PERFECT TRADING"
-        n_fact = ""
-        cliente = ""
+def clean_hdr_albaran(s):
+    if not s:
+        return ""
+    return dedup_words(str(s).replace("\n", " ").strip()).upper()
 
-        for i, l in enumerate(lines):
-            if l.startswith("COLON/OUT/"):
-                n_fact = l.replace("COLON/OUT/", "").strip()
-            elif "Dirección de entrega:" in l or "Direccin de entrega:" in l:
-                if i + 1 < len(lines):
-                    cliente = lines[i+1].strip()
+def map_albaran_columns(header_row):
+    cols = [clean_hdr_albaran(c) for c in header_row]
+    idx_prod = next((i for i, h in enumerate(cols) if "PROD" in h), 0)
+    idx_cant = next((i for i, h in enumerate(cols) if "CANT" in h), 1)
+    idx_marca = next((i for i, h in enumerate(cols) if "MARC" in h), None)
+    idx_kg = next((i for i, h in enumerate(cols) if "KG" in h), None)
+    idx_m3 = next((i for i, h in enumerate(cols) if "M3" in h or "M³" in h), None)
+    idx_nb = next((i for i, h in enumerate(cols) if ("N°" in h or "Nº" in h or "NO." in h) and "BULT" in h), None)
+    if idx_nb is None:
+        bult_indices = [i for i, h in enumerate(cols) if "BULT" in h and i > (idx_kg or 0) and i > (idx_m3 or 0)]
+        if len(bult_indices) >= 2:
+            idx_nb = bult_indices[1]
+        elif len(bult_indices) == 1:
+            idx_nb = bult_indices[0]
+    return {
+        'prod': idx_prod, 'cant': idx_cant, 'marca': idx_marca,
+        'kg': idx_kg, 'm3': idx_m3, 'nb': idx_nb
+    }
 
-        raw_items = []
-        for page in pdf.pages:
-            tables = page.extract_tables()
-            for table in tables:
-                for row in table:
-                    if not row or not row[0] or row[0] == 'Producto':
-                        continue
-                    if row[0] is None or row[0] == '':
-                        continue
+def parse_lpn_delivery(pages):
+    raw_items = []
+    cartons = []
+    footer = {}
 
-                    prod_text = str(row[0]).strip()
-                    m = re.search(r'\[(.*?)\]\s*(.*)', prod_text, re.DOTALL)
-                    if m:
-                        code = m.group(1).strip()
-                        raw_desc = m.group(2).strip().replace("\n", " ")
+    for page in pages:
+        text = page.extract_text() or ""
+        fm = re.search(r'(\d+)\s+(\d+)\s+([\d.,]+)\s*kg\s+([\d.,]+)\s*m[3³]', text)
+        if fm:
+            footer['bultos'] = int(fm.group(1))
+            footer['qty'] = parse_decimal_safe(fm.group(2))
+            footer['peso'] = parse_decimal_safe(fm.group(3))
+            footer['cbm'] = parse_decimal_safe(fm.group(4))
+
+        tables = page.extract_tables()
+        for t in tables:
+            if not t:
+                continue
+            for row in t:
+                if not row or not row[0]:
+                    pass
+                c0 = str(row[0] or "").strip()
+                if c0 == 'Carton #' or 'LPN' in c0:
+                    continue
+
+                row_str = " ".join([str(c or "") for c in row])
+                if " kg " in row_str or row_str.endswith(" kg") or ("m³" in row_str and len(row) > 10 and "m³" in str(row[10] or "")):
+                    continue
+                c_item = str(row[2] or "").strip() if len(row) > 2 else ""
+                c_desc = str(row[3] or "").strip() if len(row) > 3 else ""
+                if not c_item and not c_desc:
+                    continue
+
+                qty = parse_decimal_safe(row[4]) if len(row) > 4 else Decimal(0)
+                marca = str(row[5] or "").strip().replace("\n", " ") if len(row) > 5 else ""
+
+                m = re.search(r'\[(.*?)\]\s*(.*)', c_desc, re.DOTALL)
+                if m:
+                    code = m.group(1).strip()
+                    raw_desc = m.group(2).strip().replace("\n", " ")
+                else:
+                    code = c_item if c_item else c_desc
+                    raw_desc = c_desc
+                if not code:
+                    code = c_item
+
+                detalle = clean_detail(raw_desc)
+
+                carton_nb_match = re.search(r'\d+', c0)
+                if carton_nb_match:
+                    carton_nb = int(carton_nb_match.group())
+                    if carton_nb == 0:
+                        carton_nb = 1
+                    kg = parse_decimal_safe(row[10]) if len(row) > 10 else Decimal(0)
+                    m3 = parse_decimal_safe(row[11]) if len(row) > 11 else Decimal(0)
+                    cartons.append({
+                        'carton_nb': carton_nb,
+                        'kg': kg,
+                        'm3': m3,
+                        'items': [{
+                            'code': code,
+                            'detalle': detalle,
+                            'uni': 'PZA',
+                            'marca': marca,
+                            'qty': qty
+                        }]
+                    })
+                else:
+                    if cartons:
+                        cartons[-1]['items'].append({
+                            'code': code,
+                            'detalle': detalle,
+                            'uni': 'PZA',
+                            'marca': marca,
+                            'qty': qty
+                        })
                     else:
-                        code = prod_text
-                        raw_desc = prod_text
-
-                    qty = parse_decimal_safe(row[1])
-                    marca = str(row[2]).replace("\n", " ").strip() if len(row) > 2 and row[2] else ""
-                    kg = parse_decimal_safe(row[7]) if len(row) > 7 else Decimal(0)
-                    m3 = parse_decimal_safe(row[8]) if len(row) > 8 else Decimal(0)
-                    nb_str = str(row[10]).strip() if len(row) > 10 and row[10] else "1"
-
-                    detalle = clean_detail(raw_desc)
-                    uni = "PZA"
-
-                    # Regla 4: Distribución matemática de bultos múltiples (ej. "1-20", "1-3")
-                    range_match = re.match(r'^(\d+)\s*[-aA]\s*(\d+)$', nb_str)
-                    if range_match:
-                        start_nb = int(range_match.group(1))
-                        end_nb = int(range_match.group(2))
-                        count = end_nb - start_nb + 1
-
-                        qty_per = qty / count
-                        kg_per = (kg / count).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        m3_per = (m3 / count).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
-
-                        # Absorción de residuo matemático en el último bulto (Regla de Oro)
-                        kg_diff = kg - (kg_per * count)
-                        m3_diff = m3 - (m3_per * count)
-
-                        for idx, b_num in enumerate(range(start_nb, end_nb + 1)):
-                            cur_kg = kg_per + (kg_diff if idx == count - 1 else Decimal(0))
-                            cur_m3 = m3_per + (m3_diff if idx == count - 1 else Decimal(0))
-                            raw_items.append({
-                                'nb': b_num,
+                        cartons.append({
+                            'carton_nb': 1,
+                            'kg': Decimal(0),
+                            'm3': Decimal(0),
+                            'items': [{
                                 'code': code,
                                 'detalle': detalle,
-                                'uni': uni,
+                                'uni': 'PZA',
                                 'marca': marca,
-                                'qty': qty_per,
-                                'peso': cur_kg,
-                                'cbm': cur_m3
-                            })
-                    else:
-                        nb = int(re.sub(r'\D', '', nb_str)) if re.sub(r'\D', '', nb_str) else 1
+                                'qty': qty
+                            }]
+                        })
+
+    for c in cartons:
+        c_nb = c['carton_nb']
+        c_kg = c['kg']
+        c_m3 = c['m3']
+        items = c['items']
+        tot_c_qty = sum((it['qty'] for it in items), Decimal(0))
+
+        if len(items) == 1:
+            raw_items.append({
+                'nb': c_nb,
+                'code': items[0]['code'],
+                'detalle': items[0]['detalle'],
+                'uni': items[0]['uni'],
+                'marca': items[0]['marca'],
+                'qty': items[0]['qty'],
+                'peso': c_kg,
+                'cbm': c_m3
+            })
+        else:
+            distributed_kg = []
+            distributed_m3 = []
+            for it in items:
+                ratio = (it['qty'] / tot_c_qty) if tot_c_qty > 0 else (Decimal(1) / len(items))
+                item_kg = (c_kg * ratio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                item_m3 = (c_m3 * ratio).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+                distributed_kg.append(item_kg)
+                distributed_m3.append(item_m3)
+
+            kg_diff = c_kg - sum(distributed_kg)
+            m3_diff = c_m3 - sum(distributed_m3)
+            distributed_kg[-1] += kg_diff
+            distributed_m3[-1] += m3_diff
+
+            for idx, it in enumerate(items):
+                raw_items.append({
+                    'nb': c_nb,
+                    'code': it['code'],
+                    'detalle': it['detalle'],
+                    'uni': it['uni'],
+                    'marca': it['marca'],
+                    'qty': it['qty'],
+                    'peso': distributed_kg[idx],
+                    'cbm': distributed_m3[idx]
+                })
+
+    return raw_items, footer
+
+def parse_albaran_delivery(pages):
+    raw_items = []
+    footer = {}
+    for page in pages:
+        text = page.extract_text() or ""
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        for i, l in enumerate(lines):
+            clean_l = dedup_words(l).upper()
+            if "TOTALES" in clean_l and ("KG" in clean_l or "BULTOS" in clean_l):
+                if i + 1 < len(lines):
+                    next_l = lines[i+1].strip()
+                    tokens = [parse_decimal_safe(t) for t in next_l.split()]
+                    if len(tokens) >= 4:
+                        q_str = next_l.split()[0].replace(",", "")
+                        footer['qty'] = Decimal(q_str) if q_str.isdigit() else tokens[0]
+                        footer['peso'] = tokens[1]
+                        footer['cbm'] = tokens[2]
+                        footer['bultos'] = int(tokens[3])
+
+        tables = page.extract_tables()
+        for t in tables:
+            if not t or len(t) < 2:
+                continue
+            cols = map_albaran_columns(t[0])
+            idx_prod = cols['prod']
+            idx_cant = cols['cant']
+            idx_marca = cols['marca']
+            idx_kg = cols['kg']
+            idx_m3 = cols['m3']
+            idx_nb = cols['nb']
+
+            for row in t[1:]:
+                if not row or not row[idx_prod]:
+                    continue
+                prod_text = dedup_words(str(row[idx_prod])).strip()
+                if not prod_text or prod_text.upper().startswith("TOTAL") or prod_text.upper() == 'PRODUCTO':
+                    continue
+
+                m = re.search(r'\[(.*?)\]\s*(.*)', prod_text, re.DOTALL)
+                if m:
+                    code = m.group(1).strip()
+                    raw_desc = m.group(2).strip().replace("\n", " ")
+                else:
+                    code = prod_text
+                    raw_desc = prod_text
+
+                qty = parse_decimal_safe(row[idx_cant]) if idx_cant is not None and len(row) > idx_cant else Decimal(0)
+
+                marca = ""
+                if idx_marca is not None and len(row) > idx_marca and row[idx_marca]:
+                    marca = dedup_words(str(row[idx_marca])).strip().replace("\n", " ")
+                if not marca:
+                    for kb in KNOWN_BRANDS_PDM:
+                        if kb in code.upper() or f" {kb} " in f" {raw_desc.upper()} ":
+                            marca = kb
+                            break
+
+                kg = parse_decimal_safe(row[idx_kg]) if idx_kg is not None and len(row) > idx_kg else Decimal(0)
+                m3 = parse_decimal_safe(row[idx_m3]) if idx_m3 is not None and len(row) > idx_m3 else Decimal(0)
+
+                nb_str = ""
+                if idx_nb is not None and len(row) > idx_nb and row[idx_nb]:
+                    nb_str = str(row[idx_nb]).strip()
+                if not nb_str:
+                    nb_str = "1"
+
+                detalle = clean_detail(raw_desc)
+                uni = "PZA"
+
+                range_match = re.match(r'^(\d+)\s*[-aA]\s*(\d+)$', nb_str)
+                if range_match:
+                    start_nb = int(range_match.group(1))
+                    end_nb = int(range_match.group(2))
+                    count = end_nb - start_nb + 1
+
+                    qty_per = qty / count
+                    kg_per = (kg / count).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    m3_per = (m3 / count).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+
+                    kg_diff = kg - (kg_per * count)
+                    m3_diff = m3 - (m3_per * count)
+
+                    for idx, b_num in enumerate(range(start_nb, end_nb + 1)):
+                        cur_kg = kg_per + (kg_diff if idx == count - 1 else Decimal(0))
+                        cur_m3 = m3_per + (m3_diff if idx == count - 1 else Decimal(0))
                         raw_items.append({
-                            'nb': nb,
+                            'nb': b_num,
                             'code': code,
                             'detalle': detalle,
                             'uni': uni,
                             'marca': marca,
-                            'qty': qty,
-                            'peso': kg,
-                            'cbm': m3
+                            'qty': qty_per,
+                            'peso': cur_kg,
+                            'cbm': cur_m3
                         })
+                else:
+                    nb_digits = re.sub(r'\D', '', nb_str)
+                    nb = int(nb_digits) if nb_digits else 1
+                    raw_items.append({
+                        'nb': nb,
+                        'code': code,
+                        'detalle': detalle,
+                        'uni': uni,
+                        'marca': marca,
+                        'qty': qty,
+                        'peso': kg,
+                        'cbm': m3
+                    })
 
-        return [{
-            'proveedor': proveedor,
-            'n_fact': n_fact,
-            'cliente': cliente,
-            'items': raw_items
-        }]
+    return raw_items, footer
+
+def parse_perfect_and_pdm(pdf_path):
+    """
+    Parser unificado para facturas y listas de empaque de PERFECT TRADING y PARQUE DEL MAR 37D, S.A.
+    Soporta formato Albarán y formato CARTON_LPN, bultos mixtos, bultos múltiples, desduplicación
+    de fuentes faux-bold, múltiples entregas por archivo y absorción determinista de residuos.
+    """
+    import pdfplumber
+
+    deliveries = []
+    with pdfplumber.open(pdf_path) as pdf:
+        current_delivery = None
+        delivery_pages = []
+
+        for p_idx, page in enumerate(pdf.pages):
+            text = page.extract_text() or ""
+            m = re.findall(r'((?:COLON|WH)/OUT/\d+)', text)
+            if m:
+                if current_delivery != m[0]:
+                    current_delivery = m[0]
+                    delivery_pages.append((current_delivery, [page]))
+                else:
+                    delivery_pages[-1][1].append(page)
+            else:
+                if delivery_pages:
+                    delivery_pages[-1][1].append(page)
+                else:
+                    delivery_pages.append(("UNKNOWN", [page]))
+
+        for deliv_code, pages in delivery_pages:
+            p0_text = pages[0].extract_text() or ""
+            lines = [l.strip() for l in p0_text.split("\n") if l.strip()]
+
+            if "WH/OUT/" in deliv_code or "PARQUE DEL MAR" in p0_text.upper():
+                proveedor = "PARQUE DEL MAR 37D, S.A."
+            else:
+                proveedor = "PERFECT TRADING"
+
+            n_fact = deliv_code.replace("COLON/OUT/", "").replace("WH/OUT/", "").strip()
+
+            cliente = ""
+            for i, l in enumerate(lines):
+                clean_l = dedup_words(l)
+                if any(k in clean_l for k in ["Dirección de entrega:", "Direccin de entrega:", "Dirección de Envío:", "Dirección de Envo:"]):
+                    if i + 1 < len(lines):
+                        cliente = dedup_words(lines[i+1])
+                        cliente = re.sub(r'\s+Bolivia$', '', cliente, flags=re.IGNORECASE).strip()
+                        break
+
+            is_lpn = any("Carton #" in (p.extract_text() or "") for p in pages)
+
+            if is_lpn:
+                raw_items, footer = parse_lpn_delivery(pages)
+            else:
+                raw_items, footer = parse_albaran_delivery(pages)
+
+            if raw_items and footer:
+                cur_peso = sum(it['peso'] for it in raw_items).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                cur_cbm = sum(it['cbm'] for it in raw_items).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+
+                if 'peso' in footer and abs(footer['peso'] - cur_peso) <= Decimal('0.05'):
+                    diff_p = footer['peso'] - cur_peso
+                    raw_items[-1]['peso'] += diff_p
+
+                if 'cbm' in footer and abs(footer['cbm'] - cur_cbm) <= Decimal('0.05'):
+                    diff_c = footer['cbm'] - cur_cbm
+                    raw_items[-1]['cbm'] += diff_c
+
+            deliveries.append({
+                'proveedor': proveedor,
+                'n_fact': n_fact,
+                'cliente': cliente,
+                'items': raw_items
+            })
+
+    return deliveries
+
+def parse_perfect_trading(pdf_path):
+    return parse_perfect_and_pdm(pdf_path)
 
 COUNTRIES_JAPAN_INT = [
     "JAPON", "JAPÓN", "TAIWAN", "TAIWÁN", "CHINA", "INDIA", 
@@ -1115,7 +1420,7 @@ def parse_pdf(pdf_path):
     elif prov == "JAPAN_INTERNATIONAL":
         return parse_japan_international(pdf_path)
     else:
-        return parse_perfect_trading(pdf_path)
+        return parse_perfect_and_pdm(pdf_path)
 
 def parse_adk_excel(excel_path, wb=None):
     """Extrae facturas y repuestos desde archivos Excel de ADK CORPORATION."""
