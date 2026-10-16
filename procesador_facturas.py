@@ -78,144 +78,175 @@ def save_learned_mapping(raw_key, standardized_value, flush=True):
 
 # Patrones y reglas automotrices generales para estandarización instantánea
 GENERAL_AUTO_PATTERNS = [
+    # Tope y cubrepolvo
     (r'\bTOPE\s+Y\s+CUBRE\s*POLVO\b', 'TOPE Y CUBREPOLVO AMORTIGUADOR'),
-    (r'\bAMORT(?:IGUADOR)?[\.\s]+DEL\b', 'AMORTIGUADOR DELANTERO'),
-    (r'\bAMORT(?:IGUADOR)?[\.\s]+(?:TRAS|TRS)\b', 'AMORTIGUADOR TRASERO'),
+
+    # Bombas
+    (r'\b(?:WATER\s+PUMP|PUMP\s+WATER|BOMBA\s+(?:DE\s+)?AGUA|B\/AGUA)\b', 'BOMBA DE AGUA'),
+    (r'\b(?:PUMP\s+OIL|OIL\s+PUMP|BOMBA\s+(?:DE\s+)?ACEITE|B\/ACEITE)\b', 'BOMBA DE ACEITE'),
+    (r'\b(?:FUEL\s+PUMP|PUMP\s+FUEL|BOMBA\s+(?:DE\s+)?GAS(?:OLINA)?|B\/GAS|B[\.\/\s]+GAS(?:OLINA)?)\b', 'BOMBA DE GASOLINA'),
+    (r'\b(?:BRAKE\s+MASTER\s+CYLINDER|BOMBA\s+(?:DE\s+)?FRENO|BOMBA[\.\s]+FRENO)\b', 'BOMBA FRENO'),
+    (r'\b(?:REPARACION|REP[\.\s]+)\s+BOMBA\s+(?:AUXILIAR\s+)?(?:DE\s+)?CLUTCH\s+AUX|REPARACION\s+BOMBA\s+AUX\s+CLUTCH\b', 'KIT REPARACION BOMBA AUXILIAR CLUTCH'),
+    (r'\b(?:REPARACION|REP[\.\s]+)\s+BOMBA\s+(?:DE\s+)?CLUTCH\b', 'KIT REPARACION BOMBA CLUTCH'),
+    (r'\b(?:BOMBA\s+CILINDRO\s+SUP\s+(?:DE\s+)?CLUTCH|BOMBA\s+CLUTCH\s+SUP|BOMBA\s+CENTRAL\s+DE\s+CLUTCH|CLUTCH\s+MASTER\s+CYLINDER|PUMP\s+CYLINDER\s+UPPER\s+CLUTCH)\b', 'BOMBA CLUTCH SUP'),
+    (r'\b(?:BOMBA\s+(?:AUXILIAR\s+)?(?:DE\s+)?CLUTCH\s+AUX|BOMBA\s+CLUTCH\s+AUX|CLUTCH\s+SLAVE\s+CYLINDER|CILINDRO\s+AUXILIAR\s+(?:DE\s+)?(?:CLUTCH|EMBRAGUE)|CIL[\.\s]+ESCLAVO|REP[\.\s]+ESCLAVO|CIL[\.\s]+AUXL[\.\s]+EMBRAG)\b', 'BOMBA AUXILIAR DE EMBRAGUE'),
+    (r'\b(?:BOMBA[\.\s]+HIDRAUL(?:ICA)?|POWER\s+STEERING\s+PUMP)\b', 'BOMBA HIDRAULICA'),
+    (r'\bMOTOR[\.\s]+TANQ(?:UE)?[\.\s]+WIPER\b', 'BOMBA DE LIMPIAPARABRISAS'),
+
+    # Frenos
+    (r'\b(?:BRAKE\s+PAD[S]?|PASTILLA[S]?\s+(?:DE\s+)?FRENO|TACO[S]?\s+(?:DE\s+)?FRENO)\b', 'PASTILLAS DE FRENO'),
+    (r'\b(?:BRAKE\s+SHOE[S]?|ZAPATA[S]?\s+(?:DE\s+)?FRENO|JGO[\.\s]+ZAPATAS)\b', 'ZAPATAS DE FRENO'),
+    (r'\b(?:BRAKE\s+DISC\s+(?:DEL|FR)|DISCO\s+FRENO\s+DEL(?:ANTERO)?|DISCO[\.\s]+DEL)\b', 'DISCO FRENO DELANTERO'),
+    (r'\b(?:BRAKE\s+DISC\s+(?:TRAS|RR)|DISCO\s+FRENO\s+TRAS(?:ERO)?|DISCO[\.\s]+TRAS)\b', 'DISCO FRENO TRASERO'),
+    (r'\b(?:BRAKE\s+DISC[S]?|DISCO[\.\s]+FRENO|DISCO\s+DE\s+FRENO)\b', 'DISCO DE FRENO'),
+    (r'\b(?:BRAKE\s+CYLINDER|CIL(?:INDRO)?[\.\s]+FRENO|CAUCHO(?:S)?[\.\s]+(?:DE\s+)?FRENO)\b', 'CILINDRO DE FRENO'),
+    (r'\b(?:TAMBOR\s+(?:DE\s+)?FRENO|BRAKE\s+DRUM)\b', 'TAMBOR DE FRENO'),
+    (r'\bCALIPER(?:\s+DE\s+FRENO)?\b', 'CALIPER DE FRENO'),
+    (r'\bREFORZADOR[\.\s]+(?:DE\s+)?FRENO\b', 'REFORZADOR DE FRENO'),
+
+    # Embrague
+    (r'\b(?:CLUTCH\s+PRESSURE\s+PLATE|PRESSURE\s+PLATE|PLATO\s+(?:DE\s+)?(?:CLUTCH|EMBRAG(?:UE)?)|PLATO[\.\s]+CLUTCH)\b', 'PLATO DE EMBRAGUE'),
+    (r'\b(?:CLUTCH\s+DISC|DISC\s+CLUTCH|DISC(?:O)?[\.\s]+(?:DE\s+)?(?:EMBRAG(?:UE)?|CLUTCH))\b', 'DISCO DE EMBRAGUE'),
+    (r'\b(?:KIT\s+CLUTCH|JGO[\.\s]+CLUTCH|KIT\s+(?:DE\s+)?EMBRAGUE|JUEGO\s+(?:DE\s+)?EMBRAGUE)\b', 'KIT DE EMBRAGUE'),
+    (r'\b(?:RELEASE\s+BEARING(?:\s+CLUTCH)?|CLUTCH\s+BEARING|COLLARIN(?:\s+DE\s+EMBRAGUE)?|BALINERA\/COLLARIN\s+CLUTCH|BALINERA[\.\s]+CLUTCH)\b', 'BALINERA/COLLARIN CLUTCH'),
+    (r'\bHORQUILLA[\.\s]+(?:DE\s+)?EMBRA(?:GUE)?\b', 'HORQUILLA DE EMBRAGUE'),
+    (r'\bREFORZADOR[\.\s]+(?:DE\s+)?EMBRA[GQ](?:UE)?\b', 'REFORZADOR DE EMBRAGUE'),
+    (r'\bFAN[\.\s]+CLUTCH\b', 'FAN CLUTCH'),
+
+    # Suspensión y Dirección
+    (r'\b(?:BEARING[\/\s]+BRACKET\s+(?:FR[\.\s]+)?SHOCK\s+ABSORBER|BASE[\.\s]+AMORT(?:IGUADOR)?[\.\s]+DEL)\b', 'BASE/SOPORTE AMORTIGUADOR DELANTERO'),
+    (r'\b(?:FR\s+SHOCK\s+ABSORBER|SHOCK\s+ABSORBER\s+FR|AMORT(?:IGUADOR)?[\.\s]+DEL(?:ANTERO)?)\b', 'AMORTIGUADOR DELANTERO'),
+    (r'\b(?:RR\s+SHOCK\s+ABSORBER|SHOCK\s+ABSORBER\s+RR|AMORT(?:IGUADOR)?[\.\s]+(?:TRAS|TRS)(?:ERO)?)\b', 'AMORTIGUADOR TRASERO'),
+    (r'\b(?:SHOCK\s+ABSORBER[S]?|AMORTIGUADOR(?:ES)?)\b', 'AMORTIGUADOR'),
+    (r'\b(?:BALL\s+JOINT[S]?|ROTULA\s+(?:DE\s+)?SUSPENSION|ROTULA[S]?|BOLA|B\/SUSP|B\/PITMAN)\b', 'ROTULA DE SUSPENSION'),
+    (r'\b(?:TIE\s+ROD(?:\s+END)?|TERMINAL\s+(?:DE\s+)?DIRECCION|TERMINAL[\.\s]+EXT(?:ERIOR)?)\b', 'TERMINAL DE DIRECCION'),
+    (r'\b(?:TIE\s+ROD\s+INNER|TERMINAL[\.\s]+INT(?:ERIOR)?|TERMINAL[\.\s]+(?:DE\s+)?CREM(?:ALLERA)?|TERM[\.\s]+CREM)\b', 'TERMINAL DE CREMALLERA'),
+    (r'\b(?:STABILIZER\s+LINK|LINK\s+ESTABILIZADOR|TERMINAL[\.\s]+ESTAB(?:ILIZADOR)?(?:[\.\s]+DEL|[\.\s]+TRAS)?|MU[Ñ\uFFFD]EQUILLA|LINK)\b', 'TERMINAL ESTABILIZADOR'),
+    (r'\b(?:CONTROL\s+ARM|MESETA\/TIJERA|MESETA|TIJERA|BRAZO[\.\s]+INF(?:ERIOR)?|BRZO[\.\s]+INF)\b', 'MESETA/TIJERA'),
+    (r'\b(?:BUSHING\s+CONTROL\s+ARM|BUJE[\.\s]+CONTROL\s+ARM|BUJE\s+(?:DE\s+)?MESETA|BUJE\s+(?:DE\s+)?TIJERA)\b', 'BUJE DE MESETA'),
+    (r'\b(?:BUSHING\s+STABILIZER(?:\s+BAR)?|BUJE[\.\s]+BARRA(?:\s+ESTABILIZADORA)?)\b', 'BUJE DE BARRA ESTABILIZADORA'),
+    (r'\b(?:BUSHING\s+LEAF\s+SPRING|BUJE\s+(?:DE\s+)?MUELLE)\b', 'BUJE DE MUELLE'),
+    (r'\b(?:BUSHING[S]?|BUJE[S]?)\b', 'BUJE'),
     (r'\b(?:KIT|JG)[\.\s]+PIN\s+(?:C[\/\s]|Y\s+)?BUJES\b', 'KIT PIN BUJES'),
-    (r'\bHUB\s+DEL\b', 'HUB DELANTERO'),
-    (r'\bHUB\s+TRAS\b', 'HUB TRASERO'),
-    (r'\bHUB\s+BAL\b', 'HUB CON BALINERA'),
+    (r'\b(?:CREMALLERA(?:\s+DE\s+DIRECCION)?|STEERING\s+RACK|CREM(?:ALLERA)?[\.,\s])\b', 'CREMALLERA DE DIRECCION'),
+    (r'\b(?:ESPIRAL|RESORTE|COIL\s+SPRING)\b', 'ESPIRAL / RESORTE'),
     (r'\b(YOYOS\s+)?CINTA\s+(?:DE\s+)?TIMON\b', 'CINTA DE TIMON'),
-    (r'\b(?:TERM(?:INAL)?[\.\s]+(?:DE\s+)?CREM(?:AYERA|ALLERA)?|T[\/\.\s]+CREM(?:AYERA|ALLERA)?)\b', 'TERMINAL DE CREMALLERA'),
-    (r'\bTERM(?:INAL)?[\.\s]+(?:DE\s+)?ESTAB(?:ILIZADOR)?(?:[\.\s]+DEL|[\.\s]+TRAS)?\b', 'TERMINAL ESTABILIZADOR'),
-    (r'\bTERM(?:INAL)?\.?\s*(?:EXT|EX)\b', 'TERMINAL EXTERIOR'),
-    (r'\bTERM(?:INAL)?\.?\s*CREM\b', 'TERMINAL DE CREMALLERA'),
-    (r'\bTERM(?:INAL)?\.?\s*INT\b', 'TERMINAL INTERIOR'),
-    (r'\bTIJERA\s+TRAS\b', 'MESETA/TIJERA TRASERA'),
-    (r'\bTIJERA\b', 'MESETA/TIJERA'),
-    (r'\b(?:BRZO|BRAZO)[\.\s]+INF(?:ERIOR)?\b', 'MESETA/TIJERA'),
-    (r'\b(?:BOMBA?[\.\s]+(?:DE\s+)?GAS(?:OLINA)?|B[\.\/\s]+GAS(?:OLINA)?)\b', 'BOMBA DE GASOLINA'),
-    (r'\b(?:BOMBA?[\.\s]+ACEITE|B[\.\/\s]+ACEITE)\b', 'BOMBA DE ACEITE'),
-    (r'\bBOMBA[\.\s]+HIDRAUL(?:ICA)?\b', 'BOMBA HIDRAULICA'),
-    (r'\bBOMBA[\.\s]+AGUA\b', 'BOMBA DE AGUA'),
-    (r'\bB\/AGUA\b', 'BOMBA DE AGUA'),
-    (r'\bBOMBA[\.\s]+FRENO\b', 'BOMBA FRENO'),
-    (r'\b(?:TAPA|CARCASA\s+TAPA)[\.\s]+RAD(?:IADOR)?\b', 'TAPA DE RADIADOR'),
-    (r'\bTOMA[\.\s]+(?:DE\s+)?RAD(?:IADOR)?\b', 'TOMA DE RADIADOR'),
-    (r'\b(?:CARCAZA|CARCASA)[\.\s]+(?:DE\s+)?TERMOSTATO\b', 'CARCAZA TERMOSTATO'),
-    (r'\bTOMA[\.\s]+(?:DE\s+)?TERMOSTATO\b', 'TOMA TERMOSTATO'),
-    (r'\bCUELLO[\.\s]+(?:DE\s+)?RELLENO\s+COOLANT\b', 'CUELLO RELLENO COOLANT'),
-    (r'\bVALVULA\s+DE\s+AGUA\b', 'VALVULA DE AGUA'),
-    (r'\bRAD(?:IADOR)?[\.\s]', 'RADIADOR DE AGUA'),
-    (r'\bCREM(?:ALLERA)?[\.,\s]', 'CREMALLERA DE DIRECCION'),
-    (r'\bCREMALLERA\b', 'CREMALLERA DE DIRECCION'),
-    (r'\bCUERPO[\.\s]+(?:DE\s+)?ACEL(?:ERACION)?\b', 'CUERPO DE ACELERACION'),
-    (r'\bIN[YJ]ECTOR(?:ES)?\b', 'INYECTOR'),
-    (r'\bPUNTA[\.\s]+FLECHA\b', 'PUNTA FLECHA'),
-    (r'\bDISCO[\.\s]+FRENO\b', 'DISCO DE FRENO'),
-    (r'\bDISC(?:O)?[\.\s]+(?:DE\s+)?(?:EMBRAG(?:UE)?|CLUTCH)\b', 'DISCO DE EMBRAGUE'),
-    (r'\bDISCO\b', 'DISCO DE FRENO'),
-    (r'\bTAMBOR\s+(?:DE\s+)?FRENO\b', 'TAMBOR DE FRENO'),
-    (r'\bCRUCETA\b', 'CRUCETA'),
-    (r'\bESPIRAL\b', 'ESPIRAL / RESORTE'),
-    (r'\bBASE\s+(?:AMORT|MOTOR)?\b', 'BASE/SOPORTE MOTOR'),
-    (r'\bBOLA\b', 'ROTULA DE SUSPENSION'),
-    (r'\bCALIPER\b', 'CALIPER DE FRENO'),
-    (r'\bMU[Ñ\uFFFD]EQUILLA\b', 'TERMINAL ESTABILIZADOR'),
-    (r'\bBAL[\.\s]+AMORT\b', 'BALINERA/RODAMIENTO AMORTIGUADOR DELANTERO'),
+
+    # Rodamientos / Balineras / Hubs
+    (r'\b(?:BAL[\.\s]+AMORT|BEARING\s+STRUT|RODAMIENTO[\.\s]+AMORTIGUADOR(?:[\.\s]+DELANTERO)?)\b', 'BALINERA/RODAMIENTO AMORTIGUADOR DELANTERO'),
+    (r'\b(?:HUB\s+DEL|WHEEL\s+HUB\s+FR|CUBO[\.\s]+DEL)\b', 'HUB DELANTERO'),
+    (r'\b(?:HUB\s+TRAS|WHEEL\s+HUB\s+RR|CUBO[\.\s]+TRAS)\b', 'HUB TRASERO'),
+    (r'\bHUB\s+BAL\b', 'HUB CON BALINERA'),
     (r'\bBAL(?:INERA)?[\/\.\s]+(?:RDA[\/\.\s]+)?DEL\b', 'BALINERA DELANTERA'),
     (r'\bBAL(?:INERA)?[\/\.\s]+(?:RDA[\/\.\s]+)?TRAS\b', 'BALINERA TRASERA'),
-    (r'\bBAL[\/\.\s]+RDA\b', 'BALINERA'),
-    (r'\bBAL(?:INERA|INERAS)?\b', 'BALINERA'),
-    (r'\bBEARING\b', 'BALINERA'),
-    (r'\bBOTA\s+FLECHA\b', 'GUARDAPOLVO FLECHA'),
-    (r'\bBUJE\s+BARRA\b', 'BUJE DE BARRA ESTABILIZADORA'),
-    (r'\bBUJE\b', 'BUJE'),
-    (r'\bCIL(?:INDRO)?[\.\s]+FRENO\b', 'CILINDRO DE FRENO'),
+    (r'\b(?:CONROD\s+BEARING|ROD\s+BEARING)\b', 'CASQUILLO DE BIELA'),
+    (r'\bMAIN\s+BEARING\b', 'CASQUILLO DE BANCADA'),
+    (r'\b(?:BEARING[S]?|BALINERA[S]?|RODAMIENTO[S]?|BAL[\/\.\s]+RDA)\b', 'BALINERA'),
     (r'\bFREE\s+WHEEL\b', 'CUBO MANUAL / FREE WHEEL'),
-    (r'\bLINK\b', 'TERMINAL ESTABILIZADOR'),
+
+    # Flechas / Transmisión
+    (r'\b(?:EJE\s+FLECHA\s+COMPLETO|FLECHA\s+COMPLETA)\b', 'EJE FLECHA COMPLETO'),
+    (r'\b(?:PUNTA[\.\s]+FLECHA|CV\s+JOINT|DRIVE\s+SHAFT)\b', 'PUNTA FLECHA'),
+    (r'\bP[\/\.\s]+EJE[\.\s]+INT\b', 'PUNTA DE EJE INTERIOR'),
+    (r'\bBOTA\s+FLECHA\b', 'GUARDAPOLVO FLECHA'),
+    (r'\bBOTA[\.\s]+CREMALL(?:ERA)?\b', 'GUARDAPOLVO DE CREMALLERA'),
+    (r'\b(?:SOPORTE[\.\s]+CARDAN|PUENTE[\.\s]+CARDAN)\b', 'SOPORTE DE CARDAN'),
+    (r'\bCRUCETA(?:S)?\b', 'CRUCETA'),
+    (r'\b(?:ARO\s+(?:DE\s+)?BRONCE\s+SINCRONICO|ARO\s+BRONCE\s+SINCRONICO|ARO\s+SINCRONIZ(?:ADOR)?)\b', 'ARO SINCRONIZADOR'),
+
+    # Motor, Distribución, Eléctrico
+    (r'\b(?:SPARK\s+PLUG\s+WIRE(?:\s+SET)?|CABLE[S]?[\.\s]+(?:DE\s+)?BUJIA[S]?)\b', 'CABLES DE BUJIA'),
+    (r'\b(?:SPARK\s+PLUG[S]?|BUJIA[S]?)\b', 'BUJIA'),
+    (r'\b(?:IGNITION\s+COIL|BOBINA\s+(?:DE\s+)?(?:ENCENDIDO|IGNICION)?)\b', 'BOBINA DE ENCENDIDO'),
+    (r'\b(?:PISTON\s+RING(?:\s+SET)?|JGO[\.\s]+ANILLOS|ANILLOS?\s+(?:DE\s+)?PISTON)\b', 'ANILLOS'),
+    (r'\bPISTON(?:ES)?\b', 'PISTON'),
+    (r'\b(?:VALVE\s+GUIDE|GUIA[\.\s]+VALV(?:ULA)?)\b', 'GUIA DE VALVULA'),
+    (r'\b(?:VALVE\s+IN|VALV(?:ULA)?[\.\s]+ADM(?:ISION)?)\b', 'VALVULA DE ADMISION'),
+    (r'\b(?:VALVE\s+EX|VALV(?:ULA)?[\.\s]+ESC(?:APE)?)\b', 'VALVULA DE ESCAPE'),
+    (r'\bVALV(?:ULA)?[\.\s]+PCV\b', 'VALVULA PCV'),
+    (r'\bVALV(?:ULA)?[\.\s]+(?:DE\s+)?PURGA\b', 'VALVULA DE PURGA'),
+    (r'\b(?:CONROD\s+BEARING|ROD\s+BEARING|CASQUILLO[\.\s]+BIELA|CASQ[\.\s]+BIELA)\b', 'CASQUILLO DE BIELA'),
+    (r'\b(?:MAIN\s+BEARING|CASQUILLO[\.\s]+(?:BANC(?:ADA)?|CIG(?:UE[Ñ\uFFFD]AL)?)|CASQ[\.\s]+BANC)\b', 'CASQUILLO DE BANCADA'),
+    (r'\b(?:BEARING\s+SHELL(?:\s+CAMSHAFT)?|COJINETE[S]?)\b', 'COJINETES / CASQUILLOS'),
+    (r'\b(?:JG[\.\s]+)?AXIALES\b', 'AXIALES'),
+    (r'\bCIG(?:UE[Ñ\uFFFD]AL)?\b', 'CIGUEÑAL'),
+    (r'\bBIELA[\.\s]+(?:DE\s+)?MOTOR\b', 'BIELA DE MOTOR'),
+    (r'\bCULATA(?:\s+MOTOR)?\b', 'CULATA DE MOTOR'),
+    (r'\bCAMISA[\.\s]+(?:DE\s+)?(?:MOTOR|CILINDRO)?\b', 'CAMISA DE MOTOR'),
+    (r'\bCABALLITOS?\b', 'CABALLITOS / BALANCINES'),
+    (r'\b(?:ENGINE\s+MOUNT|SOPORTE[\.\s]+(?:DE\s+)?MOTOR|BASE[\.\s]+MOTOR|BASE\s+(?:AMORT|MOTOR)?)\b', 'BASE/SOPORTE MOTOR'),
+
+    # Empaques y Sellos
+    (r'\b(?:EMPAQUE|EMP|JUNTA)[\.\s]+(?:DE\s+)?TAPA[\.\s]+(?:DE\s+)?VALV(?:ULA)?\b', 'EMPAQUE TAPA VALVULA'),
+    (r'\bTAPA[\.\s]+(?:DE\s+)?VALV(?:ULA)?\b', 'TAPA DE VALVULA'),
+    (r'\b(?:EMPAQUE|EMP|JUNTA|EMPACADURA)[\.\s]+(?:DE\s+)?(?:CABEZOTE|CULATA|CYLINDER\s+HEAD)\b', 'EMPAQUE CABEZOTE/CAMARA'),
+    (r'\b(?:JGO[\.\s]+EMPAQUES|JUEGO[\.\s]+EMPAQUES|EMPACADURA[\.\s]+COMPLETA|FULL\s+GASKET\s+SET|OVERHAUL\s+GASKET|EMP(?:ACADURA)?\.?\s*COMPLETO|EMP(?:AQUE)?[\.\s]+OVER(?:HAUL)?)\b', 'EMPACADURA COMPLETA (JUEGO)'),
+    (r'\b(?:RETEN|RETENES|RETENEDOR|RETENEDORES|RETENEDORA|RETENEDORAS|OIL\s+SEAL|SEAL\s+OIL)\b', 'RETENEDOR'),
+    (r'(?<!MET\.)\bRET[\.\/](?!AGUA|ACEIT)', 'RETENEDOR'),
+    (r'\bSELLO(?:S)?\s+(?:DE\s+)?VALV(?:ULA)?\b', 'SELLOS DE VALVULA'),
+    (r'\bSELLO(?:S)?\s+(?:DE\s+)?BUJIA(?:S)?\b', 'SELLOS DE BUJIA'),
+
+    # Enfriamiento y Calefacción
+    (r'\b(?:CARCAZA|CARCASA)[\.\s]+(?:DE\s+)?TERMOSTATO|THERMOSTAT\s+HOUSING\b', 'CARCAZA TERMOSTATO'),
+    (r'\bTOMA[\.\s]+(?:DE\s+)?TERMOSTATO\b', 'TOMA TERMOSTATO'),
+    (r'\b(?:TERMOSTATO|THERMOSTAT)\b', 'TERMOSTATO'),
+    (r'\b(?:RADIADOR(?:[\.\s]+DE[\.\s]+AGUA)?|RAD(?:IADOR)?[\.\s])\b', 'RADIADOR DE AGUA'),
+    (r'\b(?:TAPA|CARCASA\s+TAPA)[\.\s]+RAD(?:IADOR)?\b', 'TAPA DE RADIADOR'),
+    (r'\bTOMA[\.\s]+(?:DE\s+)?RAD(?:IADOR)?\b', 'TOMA DE RADIADOR'),
+    (r'\b(?:DEPOSITO\s+(?:DE\s+)?REFRIGERANTE|TANQUE\s+(?:DE\s+)?RESERVA\s+COOLANT)\b', 'DEPOSITO DE REFRIGERANTE'),
+    (r'\bCUELLO[\.\s]+(?:DE\s+)?RELLENO\s+COOLANT\b', 'CUELLO RELLENO COOLANT'),
+    (r'\bVALVULA\s+DE\s+AGUA\b', 'VALVULA DE AGUA'),
     (r'\b(?:TUBO|TUBERIA|MANGUERA)\s+(?:MET[\.\s]+)?RET(?:ORNO)?[\.\s]+AGUA\b', 'TUBO DE RETORNO DE AGUA'),
     (r'\b(?:TUBO|TUBERIA|MANGUERA)\s+(?:MET(?:AL)?[\.\s]+)?AGUA\b', 'TUBO DE AGUA'),
     (r'\bTUBO\s+(?:DE\s+)?CALEFACCION\b', 'TUBO DE CALEFACCION'),
-    (r'\b(?:RETEN|RETENES|RETENEDOR|RETENEDORA|RETENEDORES|RETENEDORAS|OIL\s+SEAL|SEAL\s+OIL)\b', 'RETENEDOR'),
-    (r'(?<!MET\.)\bRET[\.\/](?!AGUA|ACEIT)', 'RETENEDOR'),
-    (r'\b(?:EMP(?:ACADURA)?|EMPAQUE|JUNTA)[\.\s]+(?:DE\s+)?TAPA[\.\s]+(?:DE\s+)?VALV(?:ULA)?\b', 'EMPAQUE TAPA VALVULA'),
-    (r'\bTAPA[\.\s]+(?:DE\s+)?VALV(?:ULA)?\b', 'TAPA DE VALVULA'),
-    (r'\bEMP(?:ACADURA)?\.?\s*COMPLETO\b', 'EMPACADURA COMPLETA (JUEGO)'),
-    (r'\bEMP(?:AQUE)?[\.\s]+OVER(?:HAUL)?\b', 'EMPACADURA COMPLETA (JUEGO)'),
-    (r'\bEMP(?:ACADURA)?[\.\s]+(?:CULATA|CABEZOTE)\b', 'EMPACADURA DE CULATA'),
-    (r'\b(?:JGO[\.\s]+)?CADENA[\.\/\s]+(?:DE\s+)?TIEMPO\b', 'CADENA DE TIEMPO'),
-    (r'\bCADENA\s+(?:TPO|TIEMPO)\b', 'CADENA DE TIEMPO'),
-    (r'\bCULATA(?:\s+MOTOR)?\b', 'CULATA DE MOTOR'),
-    (r'\bTAPON\s+(?:DE\s+)?(?:CARTER|RAD|RADIADOR)\b', 'TAPON'),
-    (r'\bSELLO(?:S)?\s+(?:DE\s+)?VALV(?:ULA)?\b', 'SELLOS DE VALVULA'),
-    (r'\bSELLO(?:S)?\s+(?:DE\s+)?BUJIA(?:S)?\b', 'SELLOS DE BUJIA'),
-    (r'\bTACO\s+(?:DE\s+)?FRENO\b', 'PASTILLA/TACO DE FRENO'),
     (r'\bASPAS?\b', 'ASPA DE VENTILADOR'),
     (r'\bASPA\s+VENTILADORA?\b', 'ASPA DE VENTILADOR'),
-    (r'\b(?:BOMBILLO|FOCO|HALOGENO|F\/HALOGENO)\b', 'BOMBILLO / FOCO'),
-    (r'\bSOCKET\b', 'SOCKET / CONECTOR'),
+
+    # Correas y Poleas
+    (r'\b(?:TIMING\s+BELT|CORREA\s+(?:DE\s+)?TIEMPO|CORREA\s+TPO)\b', 'CORREA DE TIEMPO'),
+    (r'\b(?:TIMING\s+CHAIN|CADENA\s+(?:DE\s+)?TIEMPO|CADENA\s+TPO)\b', 'CADENA DE TIEMPO'),
+    (r'\bCORREA\s+(?:ALT|ALTERNADOR)\b', 'CORREA DE ALTERNADOR'),
+    (r'\bCORREA\s+(?:A\/C|AC|CLIMA)\b', 'CORREA DE AIRE ACONDICIONADO'),
+    (r'\bCORREA\s+MULTICANAL\b', 'CORREA MULTICANAL'),
+    (r'\bCORREA\b', 'CORREA'),
     (r'\bPOLEA[\.\s]+(?:AJST|AJUSTE|TENS|TENSOR|TENSORA)[\.\s]*CORREA\b', 'POLEA TENSORA'),
     (r'\bPOLEA\s+(?:TENS|TENSOR|TENSORA)\b', 'POLEA TENSORA'),
     (r'\bPOLEA[\.\s]+(?:DE\s+)?CIG(?:UE[Ñ\uFFFD]AL)?\b', 'POLEA CIGUEÑAL'),
     (r'\bPOLEA\b', 'POLEA'),
     (r'\b(?:TENSOR|TENSIONER)\b', 'TENSOR'),
-    (r'\bPLATO\s+(?:DE\s+)?(?:CLUTCH|EMBRAG(?:UE)?)\b', 'PLATO DE EMBRAGUE'),
-    (r'\b(?:CIL(?:INDRO)?[\.\s]+ESCLAVO|REP[\.\s]+ESCLAVO|CIL[\.\s]+AUXL[\.\s]+EMBRAG)\b', 'BOMBA AUXILIAR DE EMBRAGUE'),
-    (r'\bCIL(?:INDRO)?[\.\s]+(?:DE\s+)?EMBRA[GQ](?:UE)?\b', 'CILINDRO DE EMBRAGUE'),
-    (r'\bCORREA\s+(?:TPO|TIEMPO|T[\.\s]|T\b)', 'CORREA DE TIEMPO'),
-    (r'\bCORREA\s+(?:ALT|ALTERNADOR)\b', 'CORREA DE ALTERNADOR'),
-    (r'\bCORREA\s+(?:A\/C|AC|CLIMA)\b', 'CORREA DE AIRE ACONDICIONADO'),
-    (r'\bCORREA\s+MULTICANAL\b', 'CORREA MULTICANAL'),
-    (r'\bCORREA\b', 'CORREA'),
-    (r'\bVALV(?:ULA)?[\.\s]+(?:DE\s+)?PURGA\b', 'VALVULA DE PURGA'),
-    (r'\bVALV(?:ULA)?[\.\s]+ADM(?:ISION)?\b', 'VALVULA DE ADMISION'),
-    (r'\bVALV(?:ULA)?[\.\s]+ESC(?:APE)?\b', 'VALVULA DE ESCAPE'),
-    (r'\bVALV(?:ULA)?[\.\s]+PCV\b', 'VALVULA PCV'),
-    (r'\bCASQ(?:UILLO)?[\.\s]+BIELA\b', 'CASQUILLO DE BIELA'),
-    (r'\bCASQ(?:UILLO)?[\.\s]+(?:BANC(?:ADA)?|CIG(?:UE[Ñ\uFFFD]AL)?)\b', 'CASQUILLO DE BANCADA'),
-    (r'\b(?:JG[\.\s]*)?A?NIO?LLOS\b', 'ANILLOS'),
-    (r'\bPISTON\b', 'PISTON'),
+
+    # Filtros
     (r'\bFILT(?:RO)?[\.\s]+AIRE\b', 'FILTRO DE AIRE'),
     (r'\bFILT(?:RO)?[\.\s]+(?:DE\s+)?GAS(?:OLINA)?\b', 'FILTRO DE GASOLINA'),
-    (r'\bBOTA[\.\s]+CREMALL(?:ERA)?\b', 'GUARDAPOLVO DE CREMALLERA'),
-    (r'\bGUIA[\.\s]+.*?\bVALV(?:ULA)?\b', 'GUIA DE VALVULA'),
-    (r'\b[VB]ARILLA[\.\s]+(?:MEDIDOR(?:A)?[\.\s]+)?ACE[IT]', 'VARILLA DE ACEITE'),
-    (r'\bP[\/\.\s]+EJE[\.\s]+INT\b', 'PUNTA DE EJE INTERIOR'),
-    (r'\bCUBO[\.\s]+(?:RDA[\.\s]+)?DEL\b', 'HUB DELANTERO'),
+
+    # Arranque y Alternador
     (r'\b(?:MOTOR[\.\s]+ARRANQ(?:UE)?|ARRANQUE)\b', 'MOTOR DE ARRANQUE'),
-    (r'\b(?:AUT[\.\s]+ARR|AUTOMATICO[\.\s]+(?:DE\s+)?ARRANQUE)\b', 'AUTOMATICO DE ARRANQUE'),
+    (r'\b(?:SOLENOID\s+STARTER|AUT[\.\s]+ARR|AUTOMATICO[\.\s]+(?:DE\s+)?ARRANQUE)\b', 'AUTOMATICO DE ARRANQUE'),
     (r'\bBENDIX(?:\s+ARRANQUE)?\b', 'BENDIX DE ARRANQUE'),
     (r'\bCARBONERA(?:\s+ARR)?\b', 'CARBONERA'),
     (r'\bALTERNADOR\b', 'ALTERNADOR'),
-    (r'\b(?:PUENTE[\.\s]+)?SOPORTE[\.\s]+CARDAN\b', 'SOPORTE DE CARDAN'),
-    (r'\bCARBURADOR\b', 'CARBURADOR'),
-    (r'\bCAUCHO(?:S)?[\.\s]+(?:DE\s+)?FRENO\b', 'CAUCHO DE FRENO'),
-    (r'\bREFORZADOR[\.\s]+(?:DE\s+)?FRENO\b', 'REFORZADOR DE FRENO'),
-    (r'\bREFORZADOR[\.\s]+(?:DE\s+)?EMBRA[GQ](?:UE)?\b', 'REFORZADOR DE EMBRAGUE'),
-    (r'\bFAN[\.\s]+CLUTCH\b', 'FAN CLUTCH'),
-    (r'\bHORQUILLA[\.\s]+(?:DE\s+)?EMBRA(?:GUE)?\b', 'HORQUILLA DE EMBRAGUE'),
-    (r'\bCABLE(?:S)?[\.\s]+(?:DE\s+)?BUJIA(?:S)?\b', 'CABLES DE BUJIA'),
-    (r'\bBUJIA(?:S)?\b', 'BUJIA'),
-    (r'\bCAMISA[\.\s]+(?:DE\s+)?(?:MOTOR|CILINDRO)?\b', 'CAMISA DE MOTOR'),
-    (r'\bCABALLITOS?\b', 'CABALLITOS / BALANCINES'),
-    (r'\bARO[\.\s]+SINCRONIZ(?:ADOR)?\b', 'ARO SINCRONIZADOR'),
+
+    # Sensores y Switche
     (r'\bBULBO[\.\s]+(?:DE\s+)?TEMP(?:ERATURA)?\b', 'SENSOR DE TEMPERATURA'),
-    (r'\bTAPA[\.\s]+(?:DE\s+)?DIST(?:RIB(?:UIDOR)?)?\b', 'TAPA DE DISTRIBUIDOR'),
-    (r'\bROTOR[\.\s]+(?:DE\s+)?DIST(?:RIB(?:UIDOR)?)?\b', 'ROTOR DE DISTRIBUIDOR'),
-    (r'\bCONDENSADOR\b', 'CONDENSADOR'),
-    (r'\b(?:JG[\.\s]+)?AXIALES\b', 'AXIALES'),
-    (r'\b(?:JG[\.\s]+)?ZAPATAS?\b', 'ZAPATAS DE FRENO'),
     (r'\b(?:SWITCH|SENSOR)[\.\s]+(?:DE\s+)?(?:REVERSA|RETROCESO)\b', 'SENSOR DE RETROCESO'),
     (r'\bSENSOR[\.\s]+(?:DE\s+)?VELOCIDAD\b', 'SENSOR DE VELOCIDAD'),
     (r'\bSENSOR[\.\s]+(?:DE\s+)?(?:POSIC(?:ION)?[\.\s]+)?EJE[\.\s]+(?:DE\s+)?LEVA[S]?\b', 'SENSOR DE EJE DE LEVAS'),
     (r'\bSENSOR[\.\s]+(?:DE\s+)?(?:POSIC(?:ION)?[\.\s]+)?CIG(?:UE[Ñ\uFFFD]AL)?\b', 'SENSOR DE CIGUEÑAL'),
-    (r'\bCIG(?:UE[Ñ\uFFFD]AL)?\b', 'CIGUEÑAL'),
+    (r'\bTERMOSWITCH\b', 'TERMOSWITCH'),
+
+    # Varios
+    (r'\bCUERPO[\.\s]+(?:DE\s+)?ACEL(?:ERACION)?\b', 'CUERPO DE ACELERACION'),
+    (r'\bIN[YJ]ECTOR(?:ES)?\b', 'INYECTOR'),
+    (r'\bCARBURADOR\b', 'CARBURADOR'),
+    (r'\b(?:BOMBILLO|FOCO|HALOGENO|F\/HALOGENO)\b', 'BOMBILLO / FOCO'),
+    (r'\bSOCKET\b', 'SOCKET / CONECTOR'),
+    (r'\bTAPA[\.\s]+(?:DE\s+)?DIST(?:RIB(?:UIDOR)?)?\b', 'TAPA DE DISTRIBUIDOR'),
+    (r'\bROTOR[\.\s]+(?:DE\s+)?DIST(?:RIB(?:UIDOR)?)?\b', 'ROTOR DE DISTRIBUIDOR'),
+    (r'\bCONDENSADOR\b', 'CONDENSADOR'),
     (r'\bDEPOSITO[\.\s]+LI[QD][\.\s]+HIDRAUL(?:ICO)?\b', 'DEPOSITO LIQUIDO HIDRAULICO'),
-    (r'\bTUBERIA[\.\s]+.*EMBRAG(?:UE)?\b', 'TUBERIA DE EMBRAGUE'),
-    (r'\bBIELA[\.\s]+(?:DE\s+)?MOTOR\b', 'BIELA DE MOTOR'),
-    (r'\bMOTOR[\.\s]+TANQ(?:UE)?[\.\s]+WIPER\b', 'BOMBA DE LIMPIAPARABRISAS'),
-    (r'\bTERMOSWITCH\b', 'TERMOSWITCH')
+    (r'\b[VB]ARILLA[\.\s]+(?:MEDIDOR(?:A)?[\.\s]+)?ACE[IT]', 'VARILLA DE ACEITE'),
+    (r'\b(?:TAPA\s+(?:DE\s+)?GASOLINA|TAPON\s+(?:DE\s+)?GASOLINA)\b', 'TAPA DE GASOLINA'),
+    (r'\bTAPON\s+(?:DE\s+)?(?:CARTER|RAD|RADIADOR)\b', 'TAPON'),
 ]
 
 def auto_standardize_unknown_part(raw_desc):
@@ -2222,8 +2253,14 @@ def export_invoices_to_excel(invoices_data, output_excel_path):
         ws.column_dimensions[col_letter].width = max(max_len + 3, 11)
 
     os.makedirs(os.path.dirname(output_excel_path), exist_ok=True)
-    wb.save(output_excel_path)
-    return output_excel_path
+    try:
+        wb.save(output_excel_path)
+        return output_excel_path
+    except PermissionError:
+        alt_path = output_excel_path.replace('.xlsx', '_ACTUALIZADO.xlsx')
+        wb.save(alt_path)
+        print(f"\n[AVISO] {os.path.basename(output_excel_path)} está abierto en Excel. Guardado como: {os.path.basename(alt_path)}")
+        return alt_path
 
 def process_file(file_path):
     """Detecta la extensión y procesa el archivo."""
@@ -2257,7 +2294,7 @@ def process_folder(input_dir, output_dir):
     """
     os.makedirs(output_dir, exist_ok=True)
     supported_exts = ('.pdf', '.xlsx', '.xls', '.docx')
-    files = [f for f in os.listdir(input_dir) if f.lower().endswith(supported_exts) and not f.startswith("~$")]
+    files = [f for f in os.listdir(input_dir) if f.lower().endswith(supported_exts) and not f.startswith("~$") and not f.endswith("_resultado.xlsx") and not f.startswith("CONSOLIDADO")]
 
     if not files:
         print(f"No se encontraron archivos PDF, Word o Excel en: {input_dir}")
