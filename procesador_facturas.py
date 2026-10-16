@@ -122,12 +122,14 @@ GENERAL_AUTO_PATTERNS = [
     (r'\b(?:TIE\s+ROD(?:\s+END)?|TERMINAL\s+(?:DE\s+)?DIRECCION|TERMINAL[\.\s]+EXT(?:ERIOR)?)\b', 'TERMINAL DE DIRECCION'),
     (r'\b(?:TIE\s+ROD\s+INNER|TERMINAL[\.\s]+INT(?:ERIOR)?|TERMINAL[\.\s]+(?:DE\s+)?CREM(?:ALLERA)?|TERM[\.\s]+CREM)\b', 'TERMINAL DE CREMALLERA'),
     (r'\b(?:STABILIZER\s+LINK|LINK\s+ESTABILIZADOR|TERMINAL[\.\s]+ESTAB(?:ILIZADOR)?(?:[\.\s]+DEL|[\.\s]+TRAS)?|MU[Ñ\uFFFD]EQUILLA|LINK)\b', 'TERMINAL ESTABILIZADOR'),
-    (r'\b(?:CONTROL\s+ARM|MESETA\/TIJERA|MESETA|TIJERA|BRAZO[\.\s]+INF(?:ERIOR)?|BRZO[\.\s]+INF)\b', 'MESETA/TIJERA'),
-    (r'\b(?:BUSHING\s+CONTROL\s+ARM|BUJE[\.\s]+CONTROL\s+ARM|BUJE\s+(?:DE\s+)?MESETA|BUJE\s+(?:DE\s+)?TIJERA)\b', 'BUJE DE MESETA'),
+    # Bujes (deben evaluarse antes de MESETA/TIJERA para no confundir BUSHING CONTROL ARM con CONTROL ARM)
     (r'\b(?:BUSHING\s+STABILIZER(?:\s+BAR)?|BUJE[\.\s]+BARRA(?:\s+ESTABILIZADORA)?)\b', 'BUJE DE BARRA ESTABILIZADORA'),
+    (r'\b(?:BUSHING\s+CONTROL\s+ARM|BUJE[\.\s]+CONTROL\s+ARM|BUJE\s+(?:DE\s+)?MESETA|BUJE\s+(?:DE\s+)?TIJERA|BUJE[\.\s]+MESETA\/TIJERA)\b', 'BUJE DE MESETA'),
     (r'\b(?:BUSHING\s+LEAF\s+SPRING|BUJE\s+(?:DE\s+)?MUELLE)\b', 'BUJE DE MUELLE'),
+    (r'\b(?:BUSHING\s+SHOCK|BUJE[\.\s]+AMORTIGUADOR)\b', 'BUJE DE AMORTIGUADOR'),
     (r'\b(?:BUSHING[S]?|BUJE[S]?)\b', 'BUJE'),
     (r'\b(?:KIT|JG)[\.\s]+PIN\s+(?:C[\/\s]|Y\s+)?BUJES\b', 'KIT PIN BUJES'),
+    (r'\b(?:CONTROL\s+ARM|MESETA\/TIJERA|MESETA|TIJERA|BRAZO[\.\s]+INF(?:ERIOR)?|BRZO[\.\s]+INF)\b', 'MESETA/TIJERA'),
     (r'\b(?:CREMALLERA(?:\s+DE\s+DIRECCION)?|STEERING\s+RACK|CREM(?:ALLERA)?[\.,\s])\b', 'CREMALLERA DE DIRECCION'),
     (r'\b(?:ESPIRAL|RESORTE|COIL\s+SPRING)\b', 'ESPIRAL / RESORTE'),
     (r'\b(YOYOS\s+)?CINTA\s+(?:DE\s+)?TIMON\b', 'CINTA DE TIMON'),
@@ -747,6 +749,16 @@ def parse_lpn_delivery(pages):
                 if not code:
                     code = c_item
 
+                # Detectar segundo código entre corchetes al final de la descripción
+                m_second = re.search(r'\[(.*?)\]\s*$', raw_desc)
+                if m_second:
+                    second_code = m_second.group(1).strip()
+                    second_code = re.sub(r'\s+', '', second_code)
+                    raw_desc = raw_desc[:m_second.start()].strip()
+                    clean_c = code.replace("-TRC", "").replace("-NISTO", "").replace("-SEIWA", "").strip()
+                    if second_code and clean_c != second_code:
+                        code = f"{code} / {second_code}"
+
                 detalle = clean_detail(raw_desc)
 
                 target_pcs = parse_decimal_safe(row[9]) if len(row) > 9 and row[9] else None
@@ -920,6 +932,16 @@ def parse_albaran_delivery(pages):
                 else:
                     code = prod_text
                     raw_desc = prod_text
+
+                # Detectar segundo código entre corchetes al final de la descripción
+                m_second = re.search(r'\[(.*?)\]\s*$', raw_desc)
+                if m_second:
+                    second_code = m_second.group(1).strip()
+                    second_code = re.sub(r'\s+', '', second_code)
+                    raw_desc = raw_desc[:m_second.start()].strip()
+                    clean_c = code.replace("-TRC", "").replace("-NISTO", "").replace("-SEIWA", "").strip()
+                    if second_code and clean_c != second_code:
+                        code = f"{code} / {second_code}"
 
                 qty = parse_decimal_safe(row[idx_cant]) if idx_cant is not None and len(row) > idx_cant else Decimal(0)
 
@@ -2097,10 +2119,12 @@ def group_invoice_items(items):
         tot_qty = sum((it['qty'] for it in group_items), Decimal(0))
         tot_peso = sum((it['peso'] for it in group_items), Decimal(0))
         tot_cbm = sum((it['cbm'] for it in group_items), Decimal(0))
+        all_codes = list(dict.fromkeys([it['code'] for it in group_items if it.get('code')]))
 
         result.append({
             'nb': nb,
             'code': dominant['code'],
+            'all_codes': all_codes,
             'detalle': dominant['detalle'],
             'uni': dominant['uni'],
             'marca': dominant['marca'],

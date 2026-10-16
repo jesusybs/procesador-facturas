@@ -101,16 +101,59 @@ def update_item():
                     it['detalle'] = new_detalle
                     updated_count += 1
 
-    # 3. Regenerar el Excel consolidado con los cambios
+    # 3. Regenerar el Excel consolidado con los cambios y re-agrupar para la vista previa
+    preview_data = []
     if LAST_INVOICES_CACHE:
         output_excel = os.path.join(OUTPUT_FOLDER, "CONSOLIDADO_FACTURAS.xlsx")
         export_invoices_to_excel(LAST_INVOICES_CACHE, output_excel)
         LAST_EXCEL_PATH = output_excel
 
+        for inv in LAST_INVOICES_CACHE:
+            prov = inv['proveedor']
+            n_fact = inv['n_fact']
+            cliente = inv['cliente']
+            sorted_rows = group_invoice_items(inv['items'])
+
+            inv_qty = sum(r['qty'] for r in sorted_rows)
+            inv_peso = sum(r['peso'] for r in sorted_rows)
+            inv_cbm = sum(r['cbm'] for r in sorted_rows)
+            last_nb = max(r['nb'] for r in sorted_rows) if sorted_rows else 0
+
+            inv_rows = []
+            for r in sorted_rows:
+                all_c = r.get('all_codes', [r['code']])
+                inv_rows.append({
+                    'proveedor': prov,
+                    'n_fact': n_fact,
+                    'cliente': cliente,
+                    'nb': r['nb'],
+                    'codigo': r['code'],
+                    'all_codes': all_c,
+                    'all_codes_str': " | ".join(all_c),
+                    'detalle': r['detalle'],
+                    'uni': r['uni'],
+                    'marca': r['marca'],
+                    'cantidad': format_number_es(r['qty']),
+                    'peso': format_number_es(r['peso'], 2),
+                    'cbm': format_number_es(r['cbm'], 4)
+                })
+
+            preview_data.append({
+                'proveedor': prov,
+                'n_fact': n_fact,
+                'cliente': cliente,
+                'rows': inv_rows,
+                'total_nb': last_nb,
+                'total_qty': format_number_es(inv_qty),
+                'total_peso': format_number_es(inv_peso, 2),
+                'total_cbm': format_number_es(inv_cbm, 4)
+            })
+
     return jsonify({
         'success': True,
         'updated_count': updated_count,
         'new_detalle': new_detalle,
+        'invoices': preview_data,
         'learned': True
     })
 
@@ -207,12 +250,15 @@ def process_files():
 
         inv_rows = []
         for r in sorted_rows:
+            all_c = r.get('all_codes', [r['code']])
             inv_rows.append({
                 'proveedor': prov,
                 'n_fact': n_fact,
                 'cliente': cliente,
                 'nb': r['nb'],
                 'codigo': r['code'],
+                'all_codes': all_c,
+                'all_codes_str': " | ".join(all_c),
                 'detalle': r['detalle'],
                 'uni': r['uni'],
                 'marca': r['marca'],

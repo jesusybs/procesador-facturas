@@ -605,6 +605,7 @@
           if (!currentSearchTerm) return true;
           return (
             (r.codigo && r.codigo.toLowerCase().includes(currentSearchTerm)) ||
+            (r.all_codes_str && r.all_codes_str.toLowerCase().includes(currentSearchTerm)) ||
             (r.detalle && r.detalle.toLowerCase().includes(currentSearchTerm)) ||
             (r.marca && r.marca.toLowerCase().includes(currentSearchTerm)) ||
             (r.proveedor && r.proveedor.toLowerCase().includes(currentSearchTerm)) ||
@@ -631,7 +632,10 @@
               <td class="px-3 py-2 text-center font-medium text-slate-900 whitespace-nowrap">${r.n_fact}</td>
               <td class="px-3 py-2 text-slate-600 whitespace-nowrap">${highlightMatch(r.cliente, currentSearchTerm)}</td>
               <td class="px-3 py-2 text-center font-semibold text-slate-900">${highlightMatch(r.nb, currentSearchTerm)}</td>
-              <td class="px-3 py-2 font-mono text-slate-700 whitespace-nowrap font-medium">${highlightMatch(r.codigo, currentSearchTerm)}</td>
+              <td class="px-3 py-2 font-mono text-slate-700 whitespace-nowrap font-medium" title="${r.all_codes && r.all_codes.length > 1 ? 'Códigos consolidados en este bulto: ' + escapeHtml(r.all_codes_str) : ''}">
+                ${highlightMatch(r.codigo, currentSearchTerm)}
+                ${r.all_codes && r.all_codes.length > 1 ? `<span class="ml-1 text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 cursor-help" title="Códigos consolidados en este bulto: ${escapeHtml(r.all_codes_str)}">+${r.all_codes.length - 1}</span>` : ''}
+              </td>
               
               <!-- Detalle Cell with Interactive Inline Editing -->
               <td class="px-3 py-2 font-medium text-slate-800 cell-detalle relative" data-detalle="${escapeHtml(r.detalle)}" data-factura="${escapeHtml(r.n_fact)}" data-code="${escapeHtml(r.codigo)}">
@@ -805,16 +809,19 @@
 
             const resData = await res.json();
             if (res.ok && resData.success) {
-              // Update local currentInvoices
-              currentInvoices.forEach(inv => {
-                if (!factura || String(inv.n_fact) === String(factura)) {
-                  inv.rows.forEach(r => {
-                    if ((code && r.codigo === code) || (r.detalle === oldDetalle)) {
-                      r.detalle = newDetalle;
-                    }
-                  });
-                }
-              });
+              if (resData.invoices && resData.invoices.length > 0) {
+                currentInvoices = resData.invoices;
+              } else {
+                currentInvoices.forEach(inv => {
+                  if (!factura || String(inv.n_fact) === String(factura)) {
+                    inv.rows.forEach(r => {
+                      if ((code && r.codigo === code) || (r.detalle === oldDetalle)) {
+                        r.detalle = newDetalle;
+                      }
+                    });
+                  }
+                });
+              }
 
               showToast(`¡Actualizado! "${newDetalle}" guardado en Excel y aprendido en diccionario.`, "success");
               renderTables(invoiceFilter.value);
