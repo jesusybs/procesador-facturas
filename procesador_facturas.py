@@ -749,15 +749,51 @@ def parse_lpn_delivery(pages):
 
                 detalle = clean_detail(raw_desc)
 
+                target_pcs = parse_decimal_safe(row[9]) if len(row) > 9 and row[9] else None
+                kg = parse_decimal_safe(row[10]) if len(row) > 10 else Decimal(0)
+                m3 = parse_decimal_safe(row[11]) if len(row) > 11 else Decimal(0)
+
                 carton_nb_match = re.search(r'\d+', c0)
+                curr_qty = sum(it['qty'] for it in cartons[-1]['items']) if cartons else Decimal(0)
+                carton_full = bool(cartons and cartons[-1].get('target_pcs') and curr_qty >= cartons[-1]['target_pcs'])
+
                 if carton_nb_match:
                     carton_nb = int(carton_nb_match.group())
                     if carton_nb == 0:
                         carton_nb = 1
-                    kg = parse_decimal_safe(row[10]) if len(row) > 10 else Decimal(0)
-                    m3 = parse_decimal_safe(row[11]) if len(row) > 11 else Decimal(0)
+
+                    if cartons and cartons[-1]['carton_nb'] == carton_nb:
+                        # Continuación del mismo bulto a través de páginas
+                        if kg > 0: cartons[-1]['kg'] = kg
+                        if m3 > 0: cartons[-1]['m3'] = m3
+                        if target_pcs: cartons[-1]['target_pcs'] = target_pcs
+                        cartons[-1]['items'].append({
+                            'code': code,
+                            'detalle': detalle,
+                            'uni': 'PZA',
+                            'marca': marca,
+                            'qty': qty
+                        })
+                    else:
+                        cartons.append({
+                            'carton_nb': carton_nb,
+                            'target_pcs': target_pcs,
+                            'kg': kg,
+                            'm3': m3,
+                            'items': [{
+                                'code': code,
+                                'detalle': detalle,
+                                'uni': 'PZA',
+                                'marca': marca,
+                                'qty': qty
+                            }]
+                        })
+                elif (row[0] is not None and row[0] == '') or carton_full:
+                    # Nuevo bulto detectado por celda delimitadora o límite de piezas alcanzado
+                    next_nb = (cartons[-1]['carton_nb'] + 1) if cartons else 1
                     cartons.append({
-                        'carton_nb': carton_nb,
+                        'carton_nb': next_nb,
+                        'target_pcs': target_pcs,
                         'kg': kg,
                         'm3': m3,
                         'items': [{
@@ -780,6 +816,7 @@ def parse_lpn_delivery(pages):
                     else:
                         cartons.append({
                             'carton_nb': 1,
+                            'target_pcs': target_pcs,
                             'kg': Decimal(0),
                             'm3': Decimal(0),
                             'items': [{
