@@ -171,6 +171,8 @@ GENERAL_AUTO_PATTERNS = [
     (r'\b(?:MAIN\s+BEARING|CASQUILLO[\.\s]+(?:BANC(?:ADA)?|CIG(?:UE[Ñ\uFFFD]AL)?)|CASQ[\.\s]+BANC)\b', 'CASQUILLO DE BANCADA'),
     (r'\b(?:BEARING\s+SHELL(?:\s+CAMSHAFT)?|COJINETE[S]?)\b', 'COJINETES / CASQUILLOS'),
     (r'\b(?:JG[\.\s]+)?AXIALES\b', 'AXIALES'),
+    (r'\bSENSOR[\.\s]+(?:DE\s+)?(?:POSIC(?:ION)?[\.\s]+)?CIG(?:UE[Ñ\uFFFD]AL)?\b', 'SENSOR DE CIGUEÑAL'),
+    (r'\bPOLEA[\.\s]+(?:DE\s+)?CIG(?:UE[Ñ\uFFFD]AL)?\b', 'POLEA CIGUEÑAL'),
     (r'\bCIG(?:UE[Ñ\uFFFD]AL)?\b', 'CIGUEÑAL'),
     (r'\bBIELA[\.\s]+(?:DE\s+)?MOTOR\b', 'BIELA DE MOTOR'),
     (r'\bCULATA(?:\s+MOTOR)?\b', 'CULATA DE MOTOR'),
@@ -2119,26 +2121,101 @@ def parse_docx(docx_path):
     """Detecta el proveedor del documento Word .docx y ejecuta el parser correspondiente."""
     return parse_aisin_docx(docx_path)
 
+ADUANA_PART_FAMILIES = [
+    ('AMORTIGUADOR', [r'\bAMORTIGUADOR', r'\bSHOCK\b', r'\bSTRUT\b']),
+    ('DISCO DE FRENO', [r'\bDISCO\s+(?:DE\s+)?FRENO', r'\bBRAKE\s+DISC', r'\bROTOR\s+BRAKE', r'\bDISCO\s+DEL\b', r'\bDISCO\s+TRAS\b']),
+    ('PASTILLAS DE FRENO', [r'\bPASTILLA', r'\bBRAKE\s+PAD']),
+    ('TAMBOR DE FRENO', [r'\bTAMBOR\s+(?:DE\s+)?FRENO', r'\bBRAKE\s+DRUM']),
+    ('ZAPATA DE FRENO', [r'\bZAPATA', r'\bBRAKE\s+SHOE']),
+    ('BUJE', [r'\bBUJE', r'\bBUSHING']),
+    ('TERMINAL', [r'\bTERMINAL', r'\bTIE\s+ROD', r'\bRACK\s+END', r'\bSTABILIZER\s+LINK']),
+    ('ROTULA', [r'\bROTULA', r'\bBALL\s+JOINT']),
+    ('BOMBA DE AGUA', [r'\bBOMBA\s+(?:DE\s+)?AGUA', r'\bWATER\s+PUMP']),
+    ('BOMBA DE ACEITE', [r'\bBOMBA\s+(?:DE\s+)?ACEITE', r'\bOIL\s+PUMP']),
+    ('BOMBA DE GASOLINA', [r'\bBOMBA\s+(?:DE\s+)?GAS', r'\bFUEL\s+PUMP', r'\bPILA\s+(?:DE\s+)?GAS']),
+    ('BOMBA DE FRENO', [r'\bBOMBA\s+(?:DE\s+)?FRENO', r'\bBRAKE\s+MASTER']),
+    ('BOMBA DE CLUTCH', [r'\bBOMBA\s+(?:DE\s+)?(?:CLUTCH|EMBRAGUE)', r'\bBOMBA\s+CILINDRO\s+(?:SUP|AUX)', r'\bCLUTCH\s+MASTER']),
+    ('BOMBA DE DIRECCION', [r'\bBOMBA\s+(?:DE\s+)?DIR', r'\bPOWER\s+STEERING\s+PUMP']),
+    ('BALINERA DE CLUTCH', [r'\b(?:BALINERA|COLLARIN)\s+(?:DE\s+)?(?:CLUTCH|EMBRAGUE)', r'\bRELEASE\s+BEARING', r'\bCLUTCH\s+BEARING']),
+    ('BALINERA / RODAMIENTO', [r'\bBALINERA', r'\bRODAMIENTO', r'\bWHEEL\s+BEARING', r'\bBEARING\b']),
+    ('ANILLOS', [r'\bANILLO', r'\bPISTON\s+RING']),
+    ('PISTON', [r'\bPISTON\b']),
+    ('CASQUILLO / COJINETE', [r'\bCASQUILLO', r'\bCOJINETE', r'\bMAIN\s+BEARING', r'\bCONROD\s+BEARING']),
+    ('VALVULA VVT', [r'\bVALVULA\s+VVT', r'\bVVT\s+VALVE', r'\bOIL\s+CONTROL\s+VALVE']),
+    ('VALVULA DE MOTOR', [r'\bVALVULA\s+(?:DE\s+)?(?:ADM|ESC|MOTOR)', r'\bVALVE\s+(?:IN|EX)\b', r'\bENGINE\s+VALVE\b', r'\bVALVULA\b']),
+    ('GUIA DE VALVULA', [r'\bGUIA\s+(?:DE\s+)?VALVULA', r'\bVALVE\s+GUIDE']),
+    ('EMPAQUE DE MOTOR', [r'\bEMPAQUE', r'\bGASKET']),
+    ('RETENEDOR', [r'\bRETEN', r'\bOIL\s+SEAL', r'\bSEAL\b']),
+    ('CORREA', [r'\bCORREA', r'\bBELT\b']),
+    ('CADENA DE TIEMPO', [r'\bCADENA\s+(?:DE\s+)?TIEMPO', r'\bTIMING\s+CHAIN']),
+    ('POLEA / TENSOR', [r'\bPOLEA', r'\bTENSOR', r'\bPULLEY', r'\bTENSIONER']),
+    ('CREMALLERA DE DIRECCION', [r'\bCREMALLERA', r'\bCAJETIN', r'\bSTEERING\s+GEAR', r'\bSTEERING\s+RACK']),
+    ('ELECTROVENTILADOR', [r'\bABANICO', r'\bELECTROVENTILADOR', r'\bFAN\s+MOTOR', r'\bCOOLING\s+FAN']),
+    ('FAN CLUTCH', [r'\bFAN\s+CLUTCH', r'\bCLUTCH\s+VENTILADOR']),
+    ('BOBINA DE ENCENDIDO', [r'\bBOBINA', r'\bIGNITION\s+COIL']),
+    ('BUJIA', [r'\bBUJIA\b', r'\bSPARK\s+PLUG']),
+    ('CABLES DE BUJIA', [r'\bCABLES?\s+(?:DE\s+)?BUJIA', r'\bWIRE\s+SET']),
+    ('SENSOR DE CIGUEÑAL / LEVAS', [r'\bSENSOR\s+(?:DE\s+)?(?:POSICION\s+)?(?:CIG|EJE\s+DE\s+LEVAS)', r'\bCRANKSHAFT\s+SENSOR', r'\bCAMSHAFT\s+SENSOR']),
+    ('SENSOR', [r'\bSENSOR\b', r'\bBULBO\b', r'\bSWITCH\b']),
+    ('PUNTA FLECHA', [r'\bPUNTA\s+(?:DE\s+)?FLECHA', r'\bJUNTA\s+HOMOCINETICA', r'\bCV\s+JOINT']),
+    ('GUARDAPOLVO', [r'\bGUARDAPOLVO', r'\bBOOT\b']),
+    ('CEPILLO LIMPIAPARABRISAS', [r'\bCEPILLO', r'\bPLUMILLA', r'\bWIPER']),
+    ('ARO BRONCE', [r'\bARO\s+BRONCE', r'\bSYNCHRONIZER\s+RING']),
+    ('SOPORTE / BASE DE MOTOR', [r'\b(?:BASE|SOPORTE)\s+(?:DE\s+)?MOTOR', r'\bENGINE\s+MOUNT']),
+    ('SOPORTE / BASE DE AMORTIGUADOR', [r'\b(?:BASE|SOPORTE)\s+(?:DE\s+)?AMORTIGUADOR', r'\bSTRUT\s+MOUNT']),
+    ('CRUCETA', [r'\bCRUCETA', r'\bUNIVERSAL\s+JOINT', r'\bU-JOINT']),
+    ('FILTRO DE AIRE', [r'\bFILTRO\s+(?:DE\s+)?AIRE', r'\bAIR\s+FILTER']),
+    ('FILTRO DE ACEITE', [r'\bFILTRO\s+(?:DE\s+)?ACEITE', r'\bOIL\s+FILTER']),
+    ('FILTRO DE COMBUSTIBLE', [r'\bFILTRO\s+(?:DE\s+)?(?:GAS|COMB)', r'\bFUEL\s+FILTER']),
+    ('FILTRO DE CABINA', [r'\bFILTRO\s+(?:DE\s+)?CABINA', r'\bCABIN\s+FILTER']),
+    ('MOTOR DE ARRANQUE', [r'\bARRANQUE', r'\bSTARTER']),
+    ('ALTERNADOR', [r'\bALTERNADOR', r'\bALTERNATOR']),
+    ('RADIADOR', [r'\bRADIADOR', r'\bRADIATOR']),
+    ('TERMOSTATO', [r'\bTERMOSTATO', r'\bTHERMOSTAT']),
+    ('MANIJA DE PUERTA', [r'\bMANIJA', r'\bDOOR\s+HANDLE']),
+    ('CIGUEÑAL', [r'\bCIGUE[Ñ\uFFFD]AL\b', r'\bCRANKSHAFT\b']),
+    ('ARBOL DE LEVAS', [r'\b(?:ARBOL|EJE)\s+(?:DE\s+)?LEVAS\b', r'\bCAMSHAFT\b']),
+    ('BIELA', [r'\bBIELA\b', r'\bCONNECTING\s+ROD\b']),
+    ('CARBURADOR', [r'\bCARBURADOR\b', r'\bCARBURETOR\b']),
+    ('CUERPO DE ACELERACION', [r'\bCUERPO\s+(?:DE\s+)?ACEL', r'\bTHROTTLE\s+BODY\b']),
+    ('INYECTOR', [r'\bIN[YJ]ECTOR', r'\bINJECTOR\b']),
+]
+
+def get_aduana_part_family(detalle, raw_desc=""):
+    """
+    Identifica la familia arancelaria/técnica de un repuesto para agruparlo
+    en Aduana dentro del mismo bulto.
+    """
+    text = (str(detalle or "") + " " + str(raw_desc or "")).upper()
+    for fam, patterns in ADUANA_PART_FAMILIES:
+        for p in patterns:
+            if re.search(p, text):
+                return fam
+    return str(detalle or "").strip().upper()
+
 def group_invoice_items(items):
     """
-    Agrupa repuestos dentro del mismo bulto por su tipo de repuesto (NB, DETALLE),
+    Agrupa repuestos dentro del mismo bulto por su familia técnica aduanera (NB, FAMILIA),
     sin importar que pertenezcan a distintos fabricantes/marcas.
 
     Reglas:
-    1. Si el repuesto es el mismo en el mismo bulto, se unen en una sola fila.
-    2. Se toma el código del repuesto que tenga la mayor cantidad.
-    3. Se conserva la descripción (y marca) del repuesto con mayor cantidad.
+    1. Si el repuesto pertenece a la misma familia técnica en el mismo bulto, se unen en una sola fila.
+    2. Se toma el código del repuesto que tenga la mayor cantidad (dominante).
+    3. Se conserva la descripción fiel y la marca del repuesto dominante con mayor cantidad.
     4. Las cantidades, pesos y CBM se suman con cuadre exacto.
     """
     groups = {}
     for it in items:
-        key = (it['nb'], it['detalle'])
+        det = str(it.get('detalle') or '').strip()
+        raw = str(it.get('raw_desc') or it.get('code') or '').strip()
+        fam = get_aduana_part_family(det, raw)
+        key = (it['nb'], fam)
         if key not in groups:
             groups[key] = []
         groups[key].append(it)
 
     result = []
-    for (nb, detalle), group_items in groups.items():
+    for (nb, fam), group_items in groups.items():
         # Ítem dominante con mayor cantidad (si hay empate en cantidad, prefiere con código o más específico)
         dominant = max(group_items, key=lambda x: (x['qty'], 1 if x.get('code') else 0, len(str(x.get('detalle', '')))))
 
